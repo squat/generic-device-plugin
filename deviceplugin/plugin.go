@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	socketPrefix        = "generic-device-plugin"
+	socketPrefix        = "gdp"
 	socketCheckInterval = 1 * time.Second
 	restartInterval     = 5 * time.Second
 )
