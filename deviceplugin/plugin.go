@@ -109,9 +109,6 @@ Outer:
 func (p *plugin) runOnce(ctx context.Context) error {
 	p.grpcServer = grpc.NewServer()
 	v1beta1.RegisterDevicePluginServer(p.grpcServer, p.DevicePluginServer)
-	if err := p.registerWithKubelet(); err != nil {
-		return fmt.Errorf("failed to register with kubelet: %v", err)
-	}
 
 	var g run.Group
 	{
@@ -130,6 +127,34 @@ func (p *plugin) runOnce(ctx context.Context) error {
 			return nil
 		}, func(error) {
 			p.grpcServer.Stop()
+		})
+	}
+
+	{
+		// Register the plugin with the kubelet.
+		ctx, cancel := context.WithCancel(ctx)
+		g.Add(func() error {
+			defer cancel()
+			level.Info(p.logger).Log("msg", "waiting for the gRPC server to be ready")
+			c, err := grpc.DialContext(ctx, p.socket, grpc.WithInsecure(), grpc.WithBlock(),
+				grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+					return (&net.Dialer{}).DialContext(ctx, "unix", addr)
+				}),
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create connection to local gRPC server: %v", err)
+			}
+			if err := c.Close(); err != nil {
+				return fmt.Errorf("failed to close connection to local gRPC server: %v", err)
+			}
+			level.Info(p.logger).Log("msg", "the gRPC server is ready")
+			if err := p.registerWithKubelet(); err != nil {
+				return fmt.Errorf("failed to register with kubelet: %v", err)
+			}
+			<-ctx.Done()
+			return nil
+		}, func(error) {
+			cancel()
 		})
 	}
 
