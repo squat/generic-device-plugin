@@ -1,5 +1,7 @@
 module github.com/squat/generic-device-plugin
 
+go 1.15
+
 require (
 	github.com/campoy/embedmd v1.0.0
 	github.com/go-kit/kit v0.9.0
@@ -13,5 +15,3 @@ require (
 	k8s.io/apimachinery v0.17.2
 	k8s.io/kubelet v0.17.2
 )
-
-go 1.13
