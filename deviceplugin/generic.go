@@ -208,3 +208,8 @@ func (gp *GenericPlugin) ListAndWatch(_ *v1beta1.Empty, stream v1beta1.DevicePlu
 func (gp *GenericPlugin) PreStartContainer(_ context.Context, _ *v1beta1.PreStartContainerRequest) (*v1beta1.PreStartContainerResponse, error) {
 	return &v1beta1.PreStartContainerResponse{}, nil
 }
+
+// GetPreferredAllocation always returns an empty response.
+func (gp *GenericPlugin) GetPreferredAllocation(context.Context, *v1beta1.PreferredAllocationRequest) (*v1beta1.PreferredAllocationResponse, error) {
+	return &v1beta1.PreferredAllocationResponse{}, nil
+}
