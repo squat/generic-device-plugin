@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -162,8 +163,8 @@ func (gp *GenericPlugin) Allocate(_ context.Context, req *v1beta1.AllocateReques
 				return nil, fmt.Errorf("requested device is not healthy %q", id)
 			}
 			resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
-				HostPath:      id,
-				ContainerPath: id,
+				HostPath:      id[0:strings.LastIndex(id, "-")],
+				ContainerPath: id[0:strings.LastIndex(id, "-")],
 				Permissions:   "mrw",
 			})
 		}
