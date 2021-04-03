@@ -6,7 +6,7 @@ This allows devices that don't require special drivers to be advertised to the c
 * running IoT applications, which often require access to hardware devices; and
 * mounting FUSE filesysems without `privileged`.
 
-[![Build Status](https://travis-ci.org/squat/generic-device-plugin.svg?branch=master)](https://travis-ci.org/squat/generic-device-plugin)
+[![Build Status](https://github.com/squat/generic-device-plugin/workflows/CI/badge.svg)](https://github.com/squat/generic-device-plugin/actions?query=workflow%3ACI)
 [![Go Report Card](https://goreportcard.com/badge/github.com/squat/generic-device-plugin)](https://goreportcard.com/report/github.com/squat/generic-device-plugin)
 
 ## Overview
@@ -31,7 +31,7 @@ The `--device` flag can be provided multiple times to allow the plugin to discov
 To install the generic-device-plugin, choose what devices should be discovered and deploy the included DaemonSet:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/squat/generic-device-plugin/master/manifests/generic-device-plugin.yaml
+kubectl apply -f https://raw.githubusercontent.com/squat/generic-device-plugin/main/manifests/generic-device-plugin.yaml
 ```
 
 *Note*: the example manifest included in this repository discovers serial devices and the `/dev/video0` device.
