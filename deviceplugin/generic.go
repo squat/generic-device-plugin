@@ -36,6 +36,7 @@ const (
 type DeviceSpec struct {
 	Resource string
 	Paths    []string
+	Count    uint
 }
 
 // GenericPlugin is a plugin for generic devices that can:
@@ -87,10 +88,12 @@ func (gp *GenericPlugin) discover() ([]v1beta1.Device, error) {
 			return nil, err
 		}
 		for _, m := range matches {
-			devices = append(devices, v1beta1.Device{
-				Health: v1beta1.Healthy,
-				ID:     m,
-			})
+			for i := uint(0); i < gp.ds.Count; i++ {
+				devices = append(devices, v1beta1.Device{
+					Health: v1beta1.Healthy,
+					ID:     fmt.Sprintf("%s-%d", m, i),
+				})
+			}
 		}
 	}
 	return devices, nil

@@ -24,9 +24,9 @@ spec:
       - image: squat/generic-device-plugin
         args:
         - --device
-        - serial,/dev/ttyUSB*,/dev/ttyACM*,/dev/tty.usb*,/dev/cu.*,/dev/cuaU*,/dev/rfcomm*
+        - '{"type": "serial", "paths": ["/dev/ttyUSB*","/dev/ttyACM*","/dev/tty.usb*","/dev/cu.*","/dev/cuaU*","/dev/rfcomm*"]}'
         - --device
-        - video,/dev/video0
+        - '{"type": "video", "paths": ["/dev/video0"]}'
         name: generic-device-plugin
         resources:
           requests:

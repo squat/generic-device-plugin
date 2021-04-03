@@ -1,7 +1,10 @@
 # Kubernetes Generic Device Plugin
 
-The generic-device-plugin enables allocating generic Linux devices, such as serial devices or video cameras, to Kubernetes Pods.
-This allows devices that don't require special drivers to be advertised to the cluster and scheduled.
+The generic-device-plugin enables allocating generic Linux devices, such as serial devices, the FUSE device, or video cameras, to Kubernetes Pods.
+This allows devices that don't require special drivers to be advertised to the cluster and scheduled, enabling various use-cases, e.g.:
+* accessing video and sound devices;
+* running IoT applications, which often require access to hardware devices; and
+* mounting FUSE filesysems without `privileged`.
 
 [![Build Status](https://travis-ci.org/squat/generic-device-plugin.svg?branch=master)](https://travis-ci.org/squat/generic-device-plugin)
 [![Go Report Card](https://goreportcard.com/badge/github.com/squat/generic-device-plugin)](https://goreportcard.com/report/github.com/squat/generic-device-plugin)
@@ -11,14 +14,14 @@ This allows devices that don't require special drivers to be advertised to the c
 The generic-device-plugin can be configured to discover and allocate any desired device using the `--device` flag.
 For example, to advertise all video devices to the cluster, the following flag could be given:
 ```
---device video,/dev/video*
+--device {"type": "video", "count": 5, "paths": ["/dev/video0"]}
 ```
 
 Now, Pods that require a video capture device, such as an object detection service, could request to be allocated one using the Kubernetes Pod `resources` field:
 ```yaml
 resources:
   limits:
-    squat.ai/video: 1
+    squat.ai/video: 5
 ```
 
 The `--device` flag can be provided multiple times to allow the plugin to discover and allocate different types of resources.
@@ -77,8 +80,9 @@ Now, the MJPEG stream could be opened by pointing a browser to [http://localhost
 Usage of bin/amd64/generic-device-plugin:
       --device stringArray        The devices to expose. This flag can be repeated to specify multiple device types.
                                   Multiple paths can be given for each type. Paths can be globs.
-                                  Should be provided in the form: <type>,<path-0>,<path-1>,<path-x>
-                                  For example: serial,/dev/ttyUSB*,/dev/ttyACM*
+                                  Should be provided in the form: {"type": "<type>", "count": <count>, "paths": [<path-0>,<path-1>,<path-x>]}
+                                  For example: {"type": "serial", "paths": ["/dev/ttyUSB*","/dev/ttyACM*"]}
+                                  Note: if omitted, "count" is assumed to be 1
       --domain string             The domain to use when when declaring devices. (default "squat.ai")
       --listen string             The address at which to listen for health and metrics. (default ":8080")
       --log-level string          Log level to use. Possible values: all, debug, info, warn, error, none (default "info")

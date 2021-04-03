@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -64,7 +65,7 @@ var (
 // Main is the principal function for the binary, wrapped only by `main` for convenience.
 func Main() error {
 	domain := flag.String("domain", defaultDomain, "The domain to use when when declaring devices.")
-	deviceSpecsRaw := flag.StringArray("device", nil, "The devices to expose. This flag can be repeated to specify multiple device types.\nMultiple paths can be given for each type. Paths can be globs.\nShould be provided in the form: <type>,<path-0>,<path-1>,<path-x>\nFor example: serial,/dev/ttyUSB*,/dev/ttyACM*")
+	deviceSpecsRaw := flag.StringArray("device", nil, "The devices to expose. This flag can be repeated to specify multiple device types.\nMultiple paths can be given for each type. Paths can be globs.\nShould be provided in the form: {\"type\": \"<type>\", \"count\": <count>, \"paths\": [<path-0>,<path-1>,<path-x>]}\nFor example: {\"type\": \"serial\", \"paths\": [\"/dev/ttyUSB*\",\"/dev/ttyACM*\"]}\nNote: if omitted, \"count\" is assumed to be 1")
 	pluginPath := flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
 	logLevel := flag.String("log-level", logLevelInfo, fmt.Sprintf("Log level to use. Possible values: %s", availableLogLevels))
 	listen := flag.String("listen", ":8080", "The address at which to listen for health and metrics.")
@@ -86,20 +87,33 @@ func Main() error {
 	var trim string
 	deviceSpecs := make([]*deviceplugin.DeviceSpec, len(*deviceSpecsRaw))
 	for i, dsr := range *deviceSpecsRaw {
+		var d struct {
+			Type  string   `json:"type"`
+			Count uint     `json:"count"`
+			Paths []string `json:"paths"`
+		}
+		if err := json.Unmarshal([]byte(dsr), &d); err != nil {
+			return fmt.Errorf("failed to parse device %q; device must be specified in the form {\"type\": \"<type>\", \"count\": <count>, \"paths\": [<path-0>,<path-1>,<path-x>]}", dsr)
+		}
+		// Ensure there is at least one of each device.
+		if d.Count == 0 {
+			d.Count = 1
+		}
 		parts = strings.Split(dsr, ",")
 		if len(parts) < 2 {
 			return fmt.Errorf("failed to parse device %q; device must be specified in the form <type>,<path>", dsr)
 		}
-		trim = strings.TrimSpace(parts[0])
+		trim = strings.TrimSpace(d.Type)
 		if !deviceTypeRegexp.MatchString(trim) {
 			return fmt.Errorf("failed to parse device %q; device type must match the regular expression %q", dsr, deviceTypeFmt)
 		}
 		deviceSpecs[i] = &deviceplugin.DeviceSpec{
 			Resource: path.Join(*domain, trim),
+			Count:    d.Count,
 		}
-		deviceSpecs[i].Paths = make([]string, len(parts)-1)
+		deviceSpecs[i].Paths = make([]string, len(d.Paths))
 		for j := range deviceSpecs[i].Paths {
-			deviceSpecs[i].Paths[j] = strings.TrimSpace(parts[j+1])
+			deviceSpecs[i].Paths[j] = strings.TrimSpace(d.Paths[j])
 		}
 	}
 	if len(deviceSpecs) == 0 {
