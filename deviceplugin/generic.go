@@ -16,9 +16,11 @@ package deviceplugin
 
 import (
 	"context"
+	"crypto/sha1"
 	"fmt"
 	"path/filepath"
-	"strings"
+	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -36,8 +38,15 @@ const (
 // it can be found. Paths can be globs.
 type DeviceSpec struct {
 	Resource string
-	Paths    []string
+	Groups   [][]string
 	Count    uint
+}
+
+// device wraps the v1.beta1.Device type to add context about
+// the device needed by the GenericPlugin.
+type device struct {
+	v1beta1.Device
+	paths []string
 }
 
 // GenericPlugin is a plugin for generic devices that can:
@@ -45,7 +54,7 @@ type DeviceSpec struct {
 // * mounted and used without special logic.
 type GenericPlugin struct {
 	ds      *DeviceSpec
-	devices map[string]v1beta1.Device
+	devices map[string]device
 	logger  log.Logger
 	mu      sync.Mutex
 
@@ -62,7 +71,7 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 
 	gp := &GenericPlugin{
 		ds:      ds,
-		devices: make(map[string]v1beta1.Device),
+		devices: make(map[string]device),
 		logger:  logger,
 		deviceGauge: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "generic_device_plugin_devices",
@@ -81,19 +90,40 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 	return NewPlugin(ds.Resource, pluginDir, gp, logger, prometheus.WrapRegistererWithPrefix("generic_", reg))
 }
 
-func (gp *GenericPlugin) discover() ([]v1beta1.Device, error) {
-	var devices []v1beta1.Device
-	for _, path := range gp.ds.Paths {
-		matches, err := filepath.Glob(path)
-		if err != nil {
-			return nil, err
+func (gp *GenericPlugin) discover() ([]device, error) {
+	var devices []device
+	for _, group := range gp.ds.Groups {
+		paths := make([][]string, len(group))
+		var length int
+		// Discover all of the devices matching each pattern in the group.
+		for i, path := range group {
+			matches, err := filepath.Glob(path)
+			if err != nil {
+				return nil, err
+			}
+			sort.Strings(matches)
+			paths[i] = matches
+			// Keep track of the shortest length in the group.
+			if length == 0 || len(matches) < length {
+				length = len(matches)
+			}
 		}
-		for _, m := range matches {
-			for i := uint(0); i < gp.ds.Count; i++ {
-				devices = append(devices, v1beta1.Device{
-					Health: v1beta1.Healthy,
-					ID:     fmt.Sprintf("%s-%d", m, i),
-				})
+		for i := 0; i < length; i++ {
+			for j := uint(0); j < gp.ds.Count; j++ {
+				h := sha1.New()
+				h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
+				d := device{
+					Device: v1beta1.Device{
+						Health: v1beta1.Healthy,
+					},
+					paths: make([]string, len(group)),
+				}
+				for k := range group {
+					h.Write([]byte(paths[k][i]))
+					d.paths[k] = paths[k][i]
+				}
+				d.ID = fmt.Sprintf("%x", h.Sum(nil))
+				devices = append(devices, d)
 			}
 		}
 	}
@@ -115,7 +145,7 @@ func (gp *GenericPlugin) refreshDevices() (bool, error) {
 	defer gp.mu.Unlock()
 
 	old := gp.devices
-	gp.devices = make(map[string]v1beta1.Device)
+	gp.devices = make(map[string]device)
 
 	var equal bool
 	// Add the new devices to the map and check
@@ -162,11 +192,13 @@ func (gp *GenericPlugin) Allocate(_ context.Context, req *v1beta1.AllocateReques
 			if dev.Health != v1beta1.Healthy {
 				return nil, fmt.Errorf("requested device is not healthy %q", id)
 			}
-			resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
-				HostPath:      id[0:strings.LastIndex(id, "-")],
-				ContainerPath: id[0:strings.LastIndex(id, "-")],
-				Permissions:   "mrw",
-			})
+			for _, path := range dev.paths {
+				resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
+					HostPath:      path,
+					ContainerPath: path,
+					Permissions:   "mrw",
+				})
+			}
 		}
 		res.ContainerResponses = append(res.ContainerResponses, resp)
 	}

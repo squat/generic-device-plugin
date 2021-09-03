@@ -62,10 +62,45 @@ var (
 	}, ", ")
 )
 
+// StringOrStringSlice is a slice of strings that can
+// be instantiated from a string or a slice of strings.
+type StringOrStringSlice []string
+
+func (s *StringOrStringSlice) UnmarshalJSON(data []byte) error {
+	var v interface{}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	if str, ok := v.(string); ok {
+		*s = append(*s, str)
+		return nil
+	}
+	if arr, ok := v.([]interface{}); ok {
+		var str string
+		var ok bool
+		for _, v := range arr {
+			str, ok = v.(string)
+			if !ok {
+				continue
+			}
+			*s = append(*s, str)
+		}
+		return nil
+	}
+	return nil
+}
+
 // Main is the principal function for the binary, wrapped only by `main` for convenience.
 func Main() error {
 	domain := flag.String("domain", defaultDomain, "The domain to use when when declaring devices.")
-	deviceSpecsRaw := flag.StringArray("device", nil, "The devices to expose. This flag can be repeated to specify multiple device types.\nMultiple paths can be given for each type. Paths can be globs.\nShould be provided in the form: {\"type\": \"<type>\", \"count\": <count>, \"paths\": [\"<path-0>\",\"<path-1>\",\"<path-x>\"]}\nFor example: {\"type\": \"serial\", \"paths\": [\"/dev/ttyUSB*\",\"/dev/ttyACM*\"]}\nA \"count\" can be specified to allow a discovered device to be scheduled multiple times.\nNote: if omitted, \"count\" is assumed to be 1")
+	deviceSpecsRaw := flag.StringArray("device", nil, `The devices to expose. This flag can be repeated to specify multiple device types.
+Multiple paths can be given for each type. Paths can be globs.
+Should be provided in the form: {"type": "<type>", "count": <count>, "paths": ["<path-0>","<path-1>","<path-x>"]}
+For example, to expose serial devices with different names: {"type": "serial", "paths": ["/dev/ttyUSB*","/dev/ttyACM*"]}
+Paths can contain lists of devices that should be grouped and mounted into a container together as one single meta-device.
+For example, to allocate and mount an audio capture device: {"type": "capture", "paths": [["/dev/snd/pcmC0D0c","/dev/snd/controlC0"]]}
+A "count" can be specified to allow a discovered device to be scheduled multiple times.
+Note: if omitted, "count" is assumed to be 1`)
 	pluginPath := flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
 	logLevel := flag.String("log-level", logLevelInfo, fmt.Sprintf("Log level to use. Possible values: %s", availableLogLevels))
 	listen := flag.String("listen", ":8080", "The address at which to listen for health and metrics.")
@@ -83,14 +118,13 @@ func Main() error {
 
 	deviceTypeFmt := "[a-z0-9][-a-z0-9]*[a-z0-9]"
 	deviceTypeRegexp := regexp.MustCompile("^" + deviceTypeFmt + "$")
-	var parts []string
 	var trim string
 	deviceSpecs := make([]*deviceplugin.DeviceSpec, len(*deviceSpecsRaw))
 	for i, dsr := range *deviceSpecsRaw {
 		var d struct {
-			Type  string   `json:"type"`
-			Count uint     `json:"count"`
-			Paths []string `json:"paths"`
+			Type  string                `json:"type"`
+			Count uint                  `json:"count"`
+			Paths []StringOrStringSlice `json:"paths"`
 		}
 		if err := json.Unmarshal([]byte(dsr), &d); err != nil {
 			return fmt.Errorf("failed to parse device %q; device must be specified in the form {\"type\": \"<type>\", \"count\": <count>, \"paths\": [\"<path-0>\",\"<path-1>\",\"<path-x>\"]}", dsr)
@@ -98,10 +132,6 @@ func Main() error {
 		// Ensure there is at least one of each device.
 		if d.Count == 0 {
 			d.Count = 1
-		}
-		parts = strings.Split(dsr, ",")
-		if len(parts) < 2 {
-			return fmt.Errorf("failed to parse device %q; device must be specified in the form <type>,<path>", dsr)
 		}
 		trim = strings.TrimSpace(d.Type)
 		if !deviceTypeRegexp.MatchString(trim) {
@@ -111,9 +141,12 @@ func Main() error {
 			Resource: path.Join(*domain, trim),
 			Count:    d.Count,
 		}
-		deviceSpecs[i].Paths = make([]string, len(d.Paths))
-		for j := range deviceSpecs[i].Paths {
-			deviceSpecs[i].Paths[j] = strings.TrimSpace(d.Paths[j])
+		deviceSpecs[i].Groups = make([][]string, len(d.Paths))
+		for j := range deviceSpecs[i].Groups {
+			deviceSpecs[i].Groups[j] = make([]string, len(d.Paths[j]))
+			for k := range deviceSpecs[i].Groups[j] {
+				deviceSpecs[i].Groups[j][k] = strings.TrimSpace(d.Paths[j][k])
+			}
 		}
 	}
 	if len(deviceSpecs) == 0 {
