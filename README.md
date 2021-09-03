@@ -80,8 +80,9 @@ Now, the MJPEG stream could be opened by pointing a browser to [http://localhost
 Usage of bin/amd64/generic-device-plugin:
       --device stringArray        The devices to expose. This flag can be repeated to specify multiple device types.
                                   Multiple paths can be given for each type. Paths can be globs.
-                                  Should be provided in the form: {"type": "<type>", "count": <count>, "paths": [<path-0>,<path-1>,<path-x>]}
+                                  Should be provided in the form: {"type": "<type>", "count": <count>, "paths": ["<path-0>","<path-1>","<path-x>"]}
                                   For example: {"type": "serial", "paths": ["/dev/ttyUSB*","/dev/ttyACM*"]}
+                                  A "count" can be specified to allow a discovered device to be scheduled multiple times.
                                   Note: if omitted, "count" is assumed to be 1
       --domain string             The domain to use when when declaring devices. (default "squat.ai")
       --listen string             The address at which to listen for health and metrics. (default ":8080")

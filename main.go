@@ -65,7 +65,7 @@ var (
 // Main is the principal function for the binary, wrapped only by `main` for convenience.
 func Main() error {
 	domain := flag.String("domain", defaultDomain, "The domain to use when when declaring devices.")
-	deviceSpecsRaw := flag.StringArray("device", nil, "The devices to expose. This flag can be repeated to specify multiple device types.\nMultiple paths can be given for each type. Paths can be globs.\nShould be provided in the form: {\"type\": \"<type>\", \"count\": <count>, \"paths\": [<path-0>,<path-1>,<path-x>]}\nFor example: {\"type\": \"serial\", \"paths\": [\"/dev/ttyUSB*\",\"/dev/ttyACM*\"]}\nNote: if omitted, \"count\" is assumed to be 1")
+	deviceSpecsRaw := flag.StringArray("device", nil, "The devices to expose. This flag can be repeated to specify multiple device types.\nMultiple paths can be given for each type. Paths can be globs.\nShould be provided in the form: {\"type\": \"<type>\", \"count\": <count>, \"paths\": [\"<path-0>\",\"<path-1>\",\"<path-x>\"]}\nFor example: {\"type\": \"serial\", \"paths\": [\"/dev/ttyUSB*\",\"/dev/ttyACM*\"]}\nA \"count\" can be specified to allow a discovered device to be scheduled multiple times.\nNote: if omitted, \"count\" is assumed to be 1")
 	pluginPath := flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
 	logLevel := flag.String("log-level", logLevelInfo, fmt.Sprintf("Log level to use. Possible values: %s", availableLogLevels))
 	listen := flag.String("listen", ":8080", "The address at which to listen for health and metrics.")
@@ -93,7 +93,7 @@ func Main() error {
 			Paths []string `json:"paths"`
 		}
 		if err := json.Unmarshal([]byte(dsr), &d); err != nil {
-			return fmt.Errorf("failed to parse device %q; device must be specified in the form {\"type\": \"<type>\", \"count\": <count>, \"paths\": [<path-0>,<path-1>,<path-x>]}", dsr)
+			return fmt.Errorf("failed to parse device %q; device must be specified in the form {\"type\": \"<type>\", \"count\": <count>, \"paths\": [\"<path-0>\",\"<path-1>\",\"<path-x>\"]}", dsr)
 		}
 		// Ensure there is at least one of each device.
 		if d.Count == 0 {
