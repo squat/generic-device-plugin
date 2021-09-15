@@ -34,19 +34,85 @@ const (
 	deviceCheckInterval = 5 * time.Second
 )
 
-// DeviceSpec defines a device type and the paths at which
-// it can be found. Paths can be globs.
+// DeviceSpec defines a device that should be discovered and scheduled.
+// DeviceSpec allows multiple host devices to be selected and scheduled fungibly under the same name.
+// Furthermore, host devices can be composed into groups of device nodes that should be scheduled
+// as an atomic unit.
 type DeviceSpec struct {
-	Resource string
-	Groups   [][]string
-	Count    uint
+	// Name is a unique string representing the kind of device this specification describes.
+	Name string `json:"name"`
+	// Groups is a list of groups of devices that should be scheduled under the same name.
+	Groups []*Group `json:"groups"`
 }
+
+// Default applies default values for all fields that can be left empty.
+func (d *DeviceSpec) Default() {
+	for _, g := range d.Groups {
+		if g.Count == 0 {
+			g.Count = 1
+		}
+		for _, p := range g.Paths {
+			if p.Type == "" {
+				p.Type = DevicePathType
+			}
+			if p.Type == DevicePathType && p.Permissions == "" {
+				p.Permissions = "mrw"
+			}
+		}
+	}
+}
+
+// Group represents a set of devices that should be grouped and mounted into a container together as one single meta-device.
+type Group struct {
+	// Paths is the list of devices of which the device group consists.
+	// Paths can be globs, in which case each device matched by the path will be schedulable `Count` times.
+	// When the paths have differing cardinalities, that is, the globs match different numbers of devices,
+	// the cardinality of each path is capped at the lowest cardinality.
+	Paths []*Path `json:"paths"`
+	// Count specifies how many times this group can be mounted concurrently.
+	// When unspecified, Count defaults to 1.
+	Count uint `json:"count,omitempty"`
+}
+
+// Path represents a file path that should be discovered.
+type Path struct {
+	// Path is the file path of a device in the host.
+	Path string `json:"path"`
+	// MountPath is the file path at which the host device should be mounted within the container.
+	// When unspecified, MountPath defaults to the Path.
+	MountPath string `json:"mountPath,omitempty"`
+	// Permissions is the file-system permissions given to the mounted device.
+	// Permissions applies only to mounts of type `Device`.
+	// This can be one or more of:
+	// * r - allows the container to read from the specified device.
+	// * w - allows the container to write to the specified device.
+	// * m - allows the container to create device files that do not yet exist.
+	// When unspecified, Permissions defaults to mrw.
+	Permissions string `json:"permissions,omitempty"`
+	// ReadOnly specifies whether the path should be mounted read-only.
+	// ReadOnly applies only to mounts of type `Mount`.
+	ReadOnly bool `json:"readOnly,omitempty"`
+	// Type describes what type of file-system node this Path represents and thus how it should be mounted.
+	// When unspecified, Type defaults to Device.
+	Type PathType `json:"type"`
+}
+
+// PathType represents the kinds of file-system nodes that can be scheduled.
+type PathType string
+
+const (
+	// DevicePathType represents a file-system device node and is mounted as a device.
+	DevicePathType PathType = "Device"
+	// MountPathType represents an ordinary file-system node and is bind-mounted.
+	MountPathType PathType = "Mount"
+)
 
 // device wraps the v1.beta1.Device type to add context about
 // the device needed by the GenericPlugin.
 type device struct {
 	v1beta1.Device
-	paths []string
+	deviceSpecs []*v1beta1.DeviceSpec
+	mounts      []*v1beta1.Mount
 }
 
 // GenericPlugin is a plugin for generic devices that can:
@@ -87,17 +153,18 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 		reg.MustRegister(gp.deviceGauge, gp.allocationsCounter)
 	}
 
-	return NewPlugin(ds.Resource, pluginDir, gp, logger, prometheus.WrapRegistererWithPrefix("generic_", reg))
+	return NewPlugin(ds.Name, pluginDir, gp, logger, prometheus.WrapRegistererWithPrefix("generic_", reg))
 }
 
 func (gp *GenericPlugin) discover() ([]device, error) {
 	var devices []device
+	var mountPath string
 	for _, group := range gp.ds.Groups {
-		paths := make([][]string, len(group))
+		paths := make([][]string, len(group.Paths))
 		var length int
 		// Discover all of the devices matching each pattern in the group.
-		for i, path := range group {
-			matches, err := filepath.Glob(path)
+		for i, path := range group.Paths {
+			matches, err := filepath.Glob(path.Path)
 			if err != nil {
 				return nil, err
 			}
@@ -109,18 +176,34 @@ func (gp *GenericPlugin) discover() ([]device, error) {
 			}
 		}
 		for i := 0; i < length; i++ {
-			for j := uint(0); j < gp.ds.Count; j++ {
+			for j := uint(0); j < group.Count; j++ {
 				h := sha1.New()
 				h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
 				d := device{
 					Device: v1beta1.Device{
 						Health: v1beta1.Healthy,
 					},
-					paths: make([]string, len(group)),
 				}
-				for k := range group {
+				for k, path := range group.Paths {
+					mountPath = path.MountPath
+					if mountPath == "" {
+						mountPath = paths[k][i]
+					}
+					switch path.Type {
+					case DevicePathType:
+						d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
+							HostPath:      paths[k][i],
+							ContainerPath: mountPath,
+							Permissions:   path.Permissions,
+						})
+					case MountPathType:
+						d.mounts = append(d.mounts, &v1beta1.Mount{
+							HostPath:      paths[k][i],
+							ContainerPath: mountPath,
+							ReadOnly:      path.ReadOnly,
+						})
+					}
 					h.Write([]byte(paths[k][i]))
-					d.paths[k] = paths[k][i]
 				}
 				d.ID = fmt.Sprintf("%x", h.Sum(nil))
 				devices = append(devices, d)
@@ -185,20 +268,15 @@ func (gp *GenericPlugin) Allocate(_ context.Context, req *v1beta1.AllocateReques
 		resp := new(v1beta1.ContainerAllocateResponse)
 		// Add all requested devices to to response.
 		for _, id := range r.DevicesIDs {
-			dev, ok := gp.devices[id]
+			d, ok := gp.devices[id]
 			if !ok {
 				return nil, fmt.Errorf("requested device does not exist %q", id)
 			}
-			if dev.Health != v1beta1.Healthy {
+			if d.Health != v1beta1.Healthy {
 				return nil, fmt.Errorf("requested device is not healthy %q", id)
 			}
-			for _, path := range dev.paths {
-				resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
-					HostPath:      path,
-					ContainerPath: path,
-					Permissions:   "mrw",
-				})
-			}
+			resp.Devices = append(resp.Devices, d.deviceSpecs...)
+			resp.Mounts = append(resp.Mounts, d.mounts...)
 		}
 		res.ContainerResponses = append(res.ContainerResponses, resp)
 	}

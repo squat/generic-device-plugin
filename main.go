@@ -62,43 +62,16 @@ var (
 	}, ", ")
 )
 
-// StringOrStringSlice is a slice of strings that can
-// be instantiated from a string or a slice of strings.
-type StringOrStringSlice []string
-
-func (s *StringOrStringSlice) UnmarshalJSON(data []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(data, &v); err != nil {
-		return err
-	}
-	if str, ok := v.(string); ok {
-		*s = append(*s, str)
-		return nil
-	}
-	if arr, ok := v.([]interface{}); ok {
-		var str string
-		var ok bool
-		for _, v := range arr {
-			str, ok = v.(string)
-			if !ok {
-				continue
-			}
-			*s = append(*s, str)
-		}
-		return nil
-	}
-	return nil
-}
-
 // Main is the principal function for the binary, wrapped only by `main` for convenience.
 func Main() error {
 	domain := flag.String("domain", defaultDomain, "The domain to use when when declaring devices.")
 	deviceSpecsRaw := flag.StringArray("device", nil, `The devices to expose. This flag can be repeated to specify multiple device types.
 Multiple paths can be given for each type. Paths can be globs.
-Should be provided in the form: {"type": "<type>", "count": <count>, "paths": ["<path-0>","<path-1>","<path-x>"]}
-For example, to expose serial devices with different names: {"type": "serial", "paths": ["/dev/ttyUSB*","/dev/ttyACM*"]}
+Should be provided in the form:
+{"name": "<name>", "groups": [{"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}], "count": <count>}]}
+For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
 Paths can contain lists of devices that should be grouped and mounted into a container together as one single meta-device.
-For example, to allocate and mount an audio capture device: {"type": "capture", "paths": [["/dev/snd/pcmC0D0c","/dev/snd/controlC0"]]}
+For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}
 A "count" can be specified to allow a discovered device to be scheduled multiple times.
 Note: if omitted, "count" is assumed to be 1`)
 	pluginPath := flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
@@ -121,31 +94,20 @@ Note: if omitted, "count" is assumed to be 1`)
 	var trim string
 	deviceSpecs := make([]*deviceplugin.DeviceSpec, len(*deviceSpecsRaw))
 	for i, dsr := range *deviceSpecsRaw {
-		var d struct {
-			Type  string                `json:"type"`
-			Count uint                  `json:"count"`
-			Paths []StringOrStringSlice `json:"paths"`
-		}
-		if err := json.Unmarshal([]byte(dsr), &d); err != nil {
+		if err := json.Unmarshal([]byte(dsr), &deviceSpecs[i]); err != nil {
 			return fmt.Errorf("failed to parse device %q; device must be specified in the form {\"type\": \"<type>\", \"count\": <count>, \"paths\": [\"<path-0>\",\"<path-1>\",\"<path-x>\"]}", dsr)
 		}
-		// Ensure there is at least one of each device.
-		if d.Count == 0 {
-			d.Count = 1
-		}
-		trim = strings.TrimSpace(d.Type)
+		// Apply defaults.
+		deviceSpecs[i].Default()
+		trim = strings.TrimSpace(deviceSpecs[i].Name)
 		if !deviceTypeRegexp.MatchString(trim) {
 			return fmt.Errorf("failed to parse device %q; device type must match the regular expression %q", dsr, deviceTypeFmt)
 		}
-		deviceSpecs[i] = &deviceplugin.DeviceSpec{
-			Resource: path.Join(*domain, trim),
-			Count:    d.Count,
-		}
-		deviceSpecs[i].Groups = make([][]string, len(d.Paths))
+		deviceSpecs[i].Name = path.Join(*domain, trim)
 		for j := range deviceSpecs[i].Groups {
-			deviceSpecs[i].Groups[j] = make([]string, len(d.Paths[j]))
-			for k := range deviceSpecs[i].Groups[j] {
-				deviceSpecs[i].Groups[j][k] = strings.TrimSpace(d.Paths[j][k])
+			for k := range deviceSpecs[i].Groups[j].Paths {
+				deviceSpecs[i].Groups[j].Paths[k].Path = strings.TrimSpace(deviceSpecs[i].Groups[j].Paths[k].Path)
+				deviceSpecs[i].Groups[j].Paths[k].MountPath = strings.TrimSpace(deviceSpecs[i].Groups[j].Paths[k].MountPath)
 			}
 		}
 	}
@@ -225,10 +187,10 @@ Note: if omitted, "count" is assumed to be 1`)
 	for i := range deviceSpecs {
 		d := deviceSpecs[i]
 		ctx, cancel := context.WithCancel(context.Background())
-		gp := deviceplugin.NewGenericPlugin(d, *pluginPath, log.With(logger, "resource", d.Resource), prometheus.WrapRegistererWith(prometheus.Labels{"resource": d.Resource}, r))
+		gp := deviceplugin.NewGenericPlugin(d, *pluginPath, log.With(logger, "resource", d.Name), prometheus.WrapRegistererWith(prometheus.Labels{"resource": d.Name}, r))
 		// Start the generic device plugin server.
 		g.Add(func() error {
-			logger.Log("msg", fmt.Sprintf("Starting the generic-device-plugin for %q.", d.Resource))
+			logger.Log("msg", fmt.Sprintf("Starting the generic-device-plugin for %q.", d.Name))
 			return gp.Run(ctx)
 		}, func(error) {
 			cancel()

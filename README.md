@@ -14,7 +14,7 @@ This allows devices that don't require special drivers to be advertised to the c
 The generic-device-plugin can be configured to discover and allocate any desired device using the `--device` flag.
 For example, to advertise all video devices to the cluster, the following flag could be given:
 ```
---device {"type": "video", "count": 5, "paths": ["/dev/video0"]}
+--device {"name": "video", "groups": [{"paths": [{"path": "/dev/video0"}]}]}
 ```
 
 Now, Pods that require a video capture device, such as an object detection service, could request to be allocated one using the Kubernetes Pod `resources` field:
@@ -34,7 +34,7 @@ To install the generic-device-plugin, choose what devices should be discovered a
 kubectl apply -f https://raw.githubusercontent.com/squat/generic-device-plugin/main/manifests/generic-device-plugin.yaml
 ```
 
-*Note*: the example manifest included in this repository discovers serial devices and the `/dev/video0` device.
+*Note*: the example manifest included in this repository discovers serial devices, the `/dev/video0` device, the `/dev/fuse` device, sound devices, and sound capture devices.
 
 Now, deploy a workload that requests one of the newly discovered resources.
 For example, the following script could be used to run a Pod that creates an MJPEG stream from a video device on the node:
@@ -80,8 +80,11 @@ Now, the MJPEG stream could be opened by pointing a browser to [http://localhost
 Usage of bin/amd64/generic-device-plugin:
       --device stringArray        The devices to expose. This flag can be repeated to specify multiple device types.
                                   Multiple paths can be given for each type. Paths can be globs.
-                                  Should be provided in the form: {"type": "<type>", "count": <count>, "paths": ["<path-0>","<path-1>","<path-x>"]}
-                                  For example: {"type": "serial", "paths": ["/dev/ttyUSB*","/dev/ttyACM*"]}
+                                  Should be provided in the form:
+                                  {"name": "<name>", "groups": [{"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}], "count": <count>}]}
+                                  For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
+                                  Paths can contain lists of devices that should be grouped and mounted into a container together as one single meta-device.
+                                  For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}
                                   A "count" can be specified to allow a discovered device to be scheduled multiple times.
                                   Note: if omitted, "count" is assumed to be 1
       --domain string             The domain to use when when declaring devices. (default "squat.ai")

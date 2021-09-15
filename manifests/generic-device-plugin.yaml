@@ -24,9 +24,27 @@ spec:
       - image: squat/generic-device-plugin
         args:
         - --device
-        - '{"type": "serial", "paths": ["/dev/ttyUSB*","/dev/ttyACM*","/dev/tty.usb*","/dev/cu.*","/dev/cuaU*","/dev/rfcomm*"]}'
+        - '{"name": "serial", "groups": [
+            {"paths": [{"path": "/dev/ttyUSB*"}]},
+            {"paths": [{"path": "/dev/ttyACM*"}]},
+            {"paths": [{"path": "/dev/tty.usb*"}]},
+            {"paths": [{"path": "/dev/cu.*"}]},
+            {"paths": [{"path": "/dev/cuaU*"}]},
+            {"paths": [{"path": "/dev/rfcomm*"}]}
+          ]}'
         - --device
-        - '{"type": "video", "paths": ["/dev/video0"]}'
+        - '{"name": "video", "groups": [{"paths": [{"path": "/dev/video0"}]}]}'
+        - --device
+        - '{"name": "fuse", "groups": [{"count": 10, "paths": [{"path": "/dev/fuse"}]}]}'
+        - --device
+        - '{"name": "audio", "groups": [{"count": 10, "paths": [{"path": "/dev/snd"}]}]}'
+        - --device
+        - '{"name": "capture", "groups": [
+            {"paths": [{"path": "/dev/snd/controlC0"}, {"path": "/dev/snd/pcmC0D0c"}]},
+            {"paths": [{"path": "/dev/snd/controlC1", "mountPath": "/dev/snd/controlC0"}, {"path": "/dev/snd/pcmC1D0c", "mountPath": "/dev/snd/pcmC0D0c"}]},
+            {"paths": [{"path": "/dev/snd/controlC2", "mountPath": "/dev/snd/controlC0"}, {"path": "/dev/snd/pcmC2D0c", "mountPath": "/dev/snd/pcmC0D0c"}]},
+            {"paths": [{"path": "/dev/snd/controlC3", "mountPath": "/dev/snd/controlC0"}, {"path": "/dev/snd/pcmC3D0c", "mountPath": "/dev/snd/pcmC0D0c"}]}
+          ]}'
         name: generic-device-plugin
         resources:
           requests:
