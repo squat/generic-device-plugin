@@ -95,7 +95,10 @@ Note: if omitted, "count" is assumed to be 1`)
 	deviceSpecs := make([]*deviceplugin.DeviceSpec, len(*deviceSpecsRaw))
 	for i, dsr := range *deviceSpecsRaw {
 		if err := json.Unmarshal([]byte(dsr), &deviceSpecs[i]); err != nil {
-			return fmt.Errorf("failed to parse device %q; device must be specified in the form {\"type\": \"<type>\", \"count\": <count>, \"paths\": [\"<path-0>\",\"<path-1>\",\"<path-x>\"]}", dsr)
+			return fmt.Errorf(
+				"failed to parse device %q; device must be specified in the form {\"name\": <name>, \"groups\":[{\"count\": <count>, \"paths\": [{\"type\": <type-1>, \"path\": <path-1>},...,{\"type\": <type-X>, \"path\": <path-x>}]}]",
+				dsr,
+			)
 		}
 		// Apply defaults.
 		deviceSpecs[i].Default()
