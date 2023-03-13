@@ -68,10 +68,14 @@ func Main() error {
 	deviceSpecsRaw := flag.StringArray("device", nil, `The devices to expose. This flag can be repeated to specify multiple device types.
 Multiple paths can be given for each type. Paths can be globs.
 Should be provided in the form:
-{"name": "<name>", "groups": [{"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}], "count": <count>}]}
+{"name": "<name>", "groups": [(device definitions)], "count": <count>}]}
+The device definition can be either a raw path, or a USB device. You cannot define both in the same group.
+For path devices, use something like: {"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}]}
+For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}]}
 For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
 Paths can contain lists of devices that should be grouped and mounted into a container together as one single meta-device.
 For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}
+For example, to expose a CH340 serial converter: {"name": "ch340", groups: [{"usb": [{"vendor": "1a86", "product": "7523"}]}]}
 A "count" can be specified to allow a discovered device to be scheduled multiple times.
 Note: if omitted, "count" is assumed to be 1`)
 	pluginPath := flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
@@ -96,7 +100,7 @@ Note: if omitted, "count" is assumed to be 1`)
 	for i, dsr := range *deviceSpecsRaw {
 		if err := json.Unmarshal([]byte(dsr), &deviceSpecs[i]); err != nil {
 			return fmt.Errorf(
-				"failed to parse device %q; device must be specified in the form {\"name\": <name>, \"groups\":[{\"count\": <count>, \"paths\": [{\"type\": <type-1>, \"path\": <path-1>},...,{\"type\": <type-X>, \"path\": <path-x>}]}]",
+				"failed to parse device %q; see --help",
 				dsr,
 			)
 		}
@@ -107,7 +111,13 @@ Note: if omitted, "count" is assumed to be 1`)
 			return fmt.Errorf("failed to parse device %q; device type must match the regular expression %q", dsr, deviceTypeFmt)
 		}
 		deviceSpecs[i].Name = path.Join(*domain, trim)
-		for j := range deviceSpecs[i].Groups {
+		for j, g := range deviceSpecs[i].Groups {
+			if len(g.Paths) > 0 && len(g.UsbSpecs) > 0 {
+				return fmt.Errorf(
+					"failed to parse device %q; cannot define both path and usb at the same time",
+					dsr,
+				)
+			}
 			for k := range deviceSpecs[i].Groups[j].Paths {
 				deviceSpecs[i].Groups[j].Paths[k].Path = strings.TrimSpace(deviceSpecs[i].Groups[j].Paths[k].Path)
 				deviceSpecs[i].Groups[j].Paths[k].MountPath = strings.TrimSpace(deviceSpecs[i].Groups[j].Paths[k].MountPath)
@@ -205,7 +215,7 @@ Note: if omitted, "count" is assumed to be 1`)
 
 func main() {
 	if err := Main(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "Execution failed: %v\n", err)
 		os.Exit(1)
 	}
 }

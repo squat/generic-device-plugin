@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/google/gousb"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
@@ -69,6 +70,8 @@ type Group struct {
 	// When the paths have differing cardinalities, that is, the globs match different numbers of devices,
 	// the cardinality of each path is capped at the lowest cardinality.
 	Paths []*Path `json:"paths"`
+	// UsbSpecs is the list of USB specifications that this device group consists of.
+	UsbSpecs []*UsbSpec `json:"usb"`
 	// Count specifies how many times this group can be mounted concurrently.
 	// When unspecified, Count defaults to 1.
 	Count uint `json:"count,omitempty"`
@@ -82,7 +85,7 @@ type Path struct {
 	// When unspecified, MountPath defaults to the Path.
 	MountPath string `json:"mountPath,omitempty"`
 	// Permissions is the file-system permissions given to the mounted device.
-	// Permissions applies only to mounts of type `Device`.
+	// Permissions apply only to mounts of type `Device`.
 	// This can be one or more of:
 	// * r - allows the container to read from the specified device.
 	// * w - allows the container to write to the specified device.
@@ -107,6 +110,16 @@ const (
 	MountPathType PathType = "Mount"
 )
 
+// UsbSpec represents a USB device specification that should be discovered.
+// A USB device must match exactly on all the given attributes to pass.
+type UsbSpec struct {
+	// Vendor is the USB Vendor ID of the device to match on.
+	// (Both of these get mangled to uint16 for processing - but you should use the hexadecimal representation.)
+	Vendor gousb.ID `json:"vendor"`
+	// Product is the USB Product ID of the device to match on.
+	Product gousb.ID `json:"product"`
+}
+
 // device wraps the v1.beta1.Device type to add context about
 // the device needed by the GenericPlugin.
 type device struct {
@@ -116,7 +129,7 @@ type device struct {
 }
 
 // GenericPlugin is a plugin for generic devices that can:
-// * be found using a file path; and
+// * be found using either a file path or a USB identifier; and
 // * mounted and used without special logic.
 type GenericPlugin struct {
 	ds      *DeviceSpec
@@ -156,13 +169,65 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 	return NewPlugin(ds.Name, pluginDir, gp, logger, prometheus.WrapRegistererWithPrefix("generic_", reg))
 }
 
-func (gp *GenericPlugin) discover() ([]device, error) {
+func (gp *GenericPlugin) discoverUSB() ([]device, error) {
+	// We take a context here because it's difficult to close it if it were any further up the stack
+	ctx := gousb.NewContext()
+	defer func(ctx *gousb.Context) {
+		err := ctx.Close()
+		if err != nil {
+			fmt.Printf("error occurred closing gousb context: %s", err)
+		}
+	}(ctx)
+	var devices []device
+	for _, group := range gp.ds.Groups {
+		paths := make([]string, len(group.UsbSpecs))
+		// Check for any USB devices.
+		for _, usbDevice := range group.UsbSpecs {
+			_, err := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+				if desc.Vendor == usbDevice.Vendor && desc.Product == usbDevice.Vendor {
+					// Found a target
+					paths = append(paths, fmt.Sprintf("/dev/bus/usb/%+04d/%+04d", desc.Bus, desc.Address))
+				}
+				// Always return false to ensure we never open a device - we're only scanning, after all.
+				return false
+			})
+
+			if err != nil {
+				return devices, err
+			}
+		}
+		if len(paths) > 0 {
+			for j := uint(0); j < group.Count; j++ {
+				h := sha1.New()
+				h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
+				d := device{
+					Device: v1beta1.Device{
+						Health: v1beta1.Healthy,
+					},
+				}
+				for _, path := range paths {
+					d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
+						HostPath:      path,
+						ContainerPath: path,
+						Permissions:   "rw",
+					})
+					h.Write([]byte(path))
+				}
+				d.ID = fmt.Sprintf("%x", h.Sum(nil))
+				devices = append(devices, d)
+			}
+		}
+	}
+	return devices, nil
+}
+
+func (gp *GenericPlugin) discoverPath() ([]device, error) {
 	var devices []device
 	var mountPath string
 	for _, group := range gp.ds.Groups {
 		paths := make([][]string, len(group.Paths))
 		var length int
-		// Discover all of the devices matching each pattern in the group.
+		// Discover all the devices matching each pattern in the Paths group.
 		for i, path := range group.Paths {
 			matches, err := filepath.Glob(path.Path)
 			if err != nil {
@@ -213,13 +278,26 @@ func (gp *GenericPlugin) discover() ([]device, error) {
 	return devices, nil
 }
 
+func (gp *GenericPlugin) discover() (devices []device, err error) {
+	path, err := gp.discoverPath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover path devices: %w", err)
+	}
+	usb, err := gp.discoverUSB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover usb devices: %w", err)
+	}
+	// This action just bolts the usb entries onto the path ones, but we're not too worried about reuse since we're about to return anyway.
+	return append(path, usb...), nil
+}
+
 // refreshDevices updates the devices available to the
 // generic device plugin and returns a boolean indicating
 // if everything is OK, i.e. if the devices are the same ones as before.
 func (gp *GenericPlugin) refreshDevices() (bool, error) {
 	devices, err := gp.discover()
 	if err != nil {
-		return false, fmt.Errorf("failed to discover devices: %v", err)
+		return false, fmt.Errorf("failed to refresh devices: %v", err)
 	}
 
 	gp.deviceGauge.Set(float64(len(devices)))
