@@ -65,8 +65,8 @@ type Group struct {
 	// When the paths have differing cardinalities, that is, the globs match different numbers of devices,
 	// the cardinality of each path is capped at the lowest cardinality.
 	Paths []*Path `json:"paths"`
-	// UsbSpecs is the list of USB specifications that this device group consists of.
-	UsbSpecs []*UsbSpec `json:"usb"`
+	// USBSpecs is the list of USB specifications that this device group consists of.
+	USBSpecs []*USBSpec `json:"usb"`
 	// Count specifies how many times this group can be mounted concurrently.
 	// When unspecified, Count defaults to 1.
 	Count uint `json:"count,omitempty"`

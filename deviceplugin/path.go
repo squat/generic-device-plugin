@@ -1,4 +1,4 @@
-// Copyright YEAR the generic-device-plugin authors
+// Copyright 2023 the generic-device-plugin authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@ package deviceplugin
 import (
 	"crypto/sha1"
 	"fmt"
-	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"path/filepath"
 	"sort"
 	"strconv"
+
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 // Path represents a file path that should be discovered.

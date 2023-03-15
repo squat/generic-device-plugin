@@ -64,7 +64,7 @@ var (
 	}, ", ")
 )
 
-func testUsbFunctionalityAvailableOnThisPlatform() (err error) {
+func testUSBFunctionalityAvailableOnThisPlatform() (err error) {
 	if runtime.GOOS != "linux" {
 		return errors.New("functionality not supported on this platform")
 	}
@@ -106,7 +106,7 @@ Note: if omitted, "count" is assumed to be 1`)
 	deviceTypeRegexp := regexp.MustCompile("^" + deviceTypeFmt + "$")
 	var trim string
 	deviceSpecs := make([]*deviceplugin.DeviceSpec, len(*deviceSpecsRaw))
-	var shouldTestUsbAvailable bool
+	var shouldTestUSBAvailable bool
 	for i, dsr := range *deviceSpecsRaw {
 		if err := json.Unmarshal([]byte(dsr), &deviceSpecs[i]); err != nil {
 			return fmt.Errorf(
@@ -122,15 +122,15 @@ Note: if omitted, "count" is assumed to be 1`)
 		}
 		deviceSpecs[i].Name = path.Join(*domain, trim)
 		for j, g := range deviceSpecs[i].Groups {
-			if len(g.Paths) > 0 && len(g.UsbSpecs) > 0 {
+			if len(g.Paths) > 0 && len(g.USBSpecs) > 0 {
 				return fmt.Errorf(
 					"failed to parse device %q; cannot define both path and usb at the same time",
 					dsr,
 				)
 			}
-			if len(g.UsbSpecs) > 0 {
+			if len(g.USBSpecs) > 0 {
 				// Should test USB can be used.
-				shouldTestUsbAvailable = true
+				shouldTestUSBAvailable = true
 			}
 			for k := range deviceSpecs[i].Groups[j].Paths {
 				deviceSpecs[i].Groups[j].Paths[k].Path = strings.TrimSpace(deviceSpecs[i].Groups[j].Paths[k].Path)
@@ -142,8 +142,8 @@ Note: if omitted, "count" is assumed to be 1`)
 		return fmt.Errorf("at least one device must be specified")
 	}
 
-	if shouldTestUsbAvailable {
-		err := testUsbFunctionalityAvailableOnThisPlatform()
+	if shouldTestUSBAvailable {
+		err := testUSBFunctionalityAvailableOnThisPlatform()
 		if err != nil {
 			return err
 		}

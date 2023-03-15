@@ -1,4 +1,4 @@
-// Copyright YEAR the generic-device-plugin authors
+// Copyright 2023 the generic-device-plugin authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
-	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"strconv"
+
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 const (
@@ -32,9 +33,9 @@ const (
 	usbDevBus                  = "/dev/bus/usb/%+04d/%+04d"
 )
 
-// UsbSpec represents a USB device specification that should be discovered.
+// USBSpec represents a USB device specification that should be discovered.
 // A USB device must match exactly on all the given attributes to pass.
-type UsbSpec struct {
+type USBSpec struct {
 	// Vendor is the USB Vendor ID of the device to match on.
 	// (Both of these get mangled to uint16 for processing - but you should use the hexadecimal representation.)
 	Vendor usbID `json:"vendor"`
@@ -127,12 +128,12 @@ func searchUSBDevices(devices *[]usbDevice, vendor usbID, product usbID) (devs [
 
 func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 	for _, group := range gp.ds.Groups {
-		paths := make([]string, len(group.UsbSpecs))
+		paths := make([]string, len(group.USBSpecs))
 		usbDevs, err := enumerateUSBDevices()
 		if err != nil {
 			return devices, err
 		}
-		for _, dev := range group.UsbSpecs {
+		for _, dev := range group.USBSpecs {
 			matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product)
 			if err != nil {
 				return nil, err
