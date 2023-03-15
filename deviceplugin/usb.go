@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
@@ -43,8 +44,10 @@ type USBSpec struct {
 	Product usbID `json:"product"`
 }
 
+// usbID is a representation of a platform or vendor ID under the USB standard (see gousb.ID)
 type usbID uint16
 
+// UnmarshalJSON handles incoming standard platform / vendor IDs.
 func (id *usbID) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" || string(data) == `""` {
 		return nil
@@ -53,6 +56,7 @@ func (id *usbID) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// String returns a standardised hexadecimal representation of the usbID.
 func (id *usbID) String() string {
 	return fmt.Sprintf("%04x", int(*id))
 }
@@ -69,54 +73,85 @@ type usbDevice struct {
 	BusDevice uint16 `json:"busdev"`
 }
 
+// BusPath returns the platform-correct path to the raw device.
 func (dev *usbDevice) BusPath() (path string) {
 	return fmt.Sprintf(usbDevBus, dev.Bus, dev.BusDevice)
 }
 
+// queryUSBDeviceCharacteristicsByDirectory scans the given directory for information regarding the given USB device,
+// then returns a pointer to a new usbDevice if information is found.
+func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevice, err error) {
+	if !dir.IsDir() {
+		// There shouldn't be any raw files in this directory, but just in case.
+		return
+	}
+	// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
+	vnd, err := os.ReadFile(dir.Name() + "/" + usbDevicesDirVendorIDFile)
+	if err != nil {
+		// We can't read the vendor file for some reason, it probably doesn't exist.
+		return
+	}
+	prd, err := os.ReadFile(dir.Name() + "/" + usbDevicesDirProductIDFile)
+	if err != nil {
+		return
+	}
+
+	// The following two calls shouldn't fail.
+	busRaw, err := os.ReadFile(dir.Name() + "/" + usbDevicesDirBusFile)
+	if err != nil {
+		return result, err
+	}
+	bus := binary.LittleEndian.Uint16(busRaw)
+	busLocRaw, err := os.ReadFile(dir.Name() + "/" + usbDevicesDirBusDevFile)
+	if err != nil {
+		return result, err
+	}
+	busLoc := binary.LittleEndian.Uint16(busLocRaw)
+
+	res := usbDevice{
+		Vendor:    usbID(binary.LittleEndian.Uint16(vnd)),
+		Product:   usbID(binary.LittleEndian.Uint16(prd)),
+		Bus:       bus,
+		BusDevice: busLoc,
+	}
+	return &res, nil
+}
+
+// enumerateUSBDevices rapidly scans the OS system bus for attached USB devices.
+// Pure Go; does not require external linking.
 func enumerateUSBDevices() (specs []usbDevice, err error) {
 	allDevs, err := os.ReadDir(usbDevicesDir)
 	if err != nil {
 		return
 	}
-	for _, dev := range allDevs {
-		if !dev.IsDir() {
-			// There shouldn't be any raw files in this directory, but just in case.
-			continue
-		}
-		// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
-		vnd, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirVendorIDFile)
-		if err != nil {
-			// We can't read the vendor file for some reason, it probably doesn't exist.
-			continue
-		}
-		prd, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirProductIDFile)
-		if err != nil {
-			continue
-		}
 
-		// The following two calls shouldn't fail.
-		busRaw, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirBusFile)
-		if err != nil {
-			return specs, err
-		}
-		bus := binary.LittleEndian.Uint16(busRaw)
-		busLocRaw, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirBusDevFile)
-		if err != nil {
-			return specs, err
-		}
-		busLoc := binary.LittleEndian.Uint16(busLocRaw)
+	var wg sync.WaitGroup
+	for i, dev := range allDevs {
+		wg.Add(1)
 
-		spec := usbDevice{
-			Vendor:    usbID(binary.LittleEndian.Uint16(vnd)),
-			Product:   usbID(binary.LittleEndian.Uint16(prd)),
-			Bus:       bus,
-			BusDevice: busLoc,
-		}
-		specs = append(specs, spec)
+		// Copy the loop variables
+		index := i
+		device := dev
+
+		go func() {
+			defer wg.Done()
+			result, err := queryUSBDeviceCharacteristicsByDirectory(device)
+			if err != nil {
+				// do we want to handle errors here?
+				return
+			}
+			if result != nil {
+				specs[index] = *result
+			}
+		}()
 	}
+
+	wg.Wait()
+
 	return
 }
 
+// searchUSBDevices returns a subset of the "devices" slice containing only those usbDevices that match the given vendor and product arguments.
 func searchUSBDevices(devices *[]usbDevice, vendor usbID, product usbID) (devs []usbDevice, err error) {
 	for _, dev := range *devices {
 		if dev.Vendor == vendor && dev.Product == product {
