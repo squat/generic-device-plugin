@@ -20,7 +20,7 @@ ifneq ($(TAG),)
 endif
 DIRTY := $(shell test -z "$$(git diff --shortstat 2>/dev/null)" || echo -dirty)
 VERSION := $(VERSION)$(DIRTY)
-LD_FLAGS := -ldflags '-X $(PKG)/pkg/version.Version=$(VERSION)'
+LD_FLAGS := -ldflags "-X $(PKG)/version.Version=$(VERSION) -extldflags -static"
 SRC := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 GO_FILES ?= $$(find . -name '*.go' -not -path './vendor/*')
 GO_PKGS ?= $$(go list ./... | grep -v "$(PKG)/vendor")
@@ -57,23 +57,32 @@ all-container-latest: $(addprefix container-latest-, $(ALL_ARCH))
 
 all-push-latest: $(addprefix push-latest-, $(ALL_ARCH))
 
+CONTAINERIZE_BUILD ?= true
+BUILD_PREFIX :=
+BUILD_SUFIX :=
+ifeq ($(CONTAINERIZE_BUILD), true)
+	BUILD_PREFIX := docker run --rm \
+	    -u $$(id -u):$$(id -g) \
+	    -v $$(pwd):/src \
+	    -w /src \
+	    --entrypoint '' \
+	    $(BUILD_IMAGE) \
+	    /bin/sh -c ' \
+	        GOCACHE=$$(pwd)/.cache
+	BUILD_SUFIX := '
+endif
+
 $(BINS): $(SRC) go.mod
 	@mkdir -p bin/$(ARCH)
 	@echo "building: $@"
-	@docker run --rm \
-	    -u $$(id -u):$$(id -g) \
-	    -v $$(pwd):/$(PROJECT) \
-	    -w /$(PROJECT) \
-	    $(BUILD_IMAGE) \
-	    /bin/sh -c " \
+	@$(BUILD_PREFIX) \
 	        GOARCH=$(ARCH) \
 	        GOOS=linux \
-	        GOCACHE=/$(PROJECT)/.cache \
 		CGO_ENABLED=0 \
-		go build -mod=vendor -o $@ \
+		go build -o $@ \
 		    $(LD_FLAGS) \
 		    . \
-	    "
+	$(BUILD_SUFIX)
 
 fmt:
 	@echo $(GO_PKGS)
