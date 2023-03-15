@@ -130,18 +130,18 @@ func enumerateUSBDevices() (specs []usbDevice, err error) {
 		wg.Add(1)
 
 		// Copy the loop variables
-		index := i
-		device := dev
+		i := i
+		dev := dev
 
 		go func() {
 			defer wg.Done()
-			result, err := queryUSBDeviceCharacteristicsByDirectory(device)
+			result, err := queryUSBDeviceCharacteristicsByDirectory(dev)
 			if err != nil {
 				// do we want to handle errors here?
 				return
 			}
 			if result != nil {
-				specs[index] = *result
+				specs[i] = *result
 			}
 		}()
 	}
