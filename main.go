@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -24,6 +25,7 @@ import (
 	"os/signal"
 	"path"
 	"regexp"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -61,6 +63,13 @@ var (
 		logLevelNone,
 	}, ", ")
 )
+
+func testUsbFunctionalityAvailableOnThisPlatform() (err error) {
+	if runtime.GOOS != "linux" {
+		return errors.New("functionality not supported on this platform")
+	}
+	return
+}
 
 // Main is the principal function for the binary, wrapped only by `main` for convenience.
 func Main() error {
@@ -134,7 +143,7 @@ Note: if omitted, "count" is assumed to be 1`)
 	}
 
 	if shouldTestUsbAvailable {
-		err := deviceplugin.TestUsbFunctionalityAvailableOnThisPlatform()
+		err := testUsbFunctionalityAvailableOnThisPlatform()
 		if err != nil {
 			return err
 		}

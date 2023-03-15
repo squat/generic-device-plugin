@@ -17,31 +17,20 @@ package deviceplugin
 import (
 	"crypto/sha1"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
-	"runtime"
 	"strconv"
 )
 
 const (
 	usbDevicesDir              = "/sys/bus/usb/devices/"
-	usbDevicesDirVendorIdFile  = "idVendor"
-	usbDevicesDirProductIdFile = "idProduct"
+	usbDevicesDirVendorIDFile  = "idVendor"
+	usbDevicesDirProductIDFile = "idProduct"
 	usbDevicesDirBusFile       = "busnum"
 	usbDevicesDirBusDevFile    = "devnum"
 	usbDevBus                  = "/dev/bus/usb/%+04d/%+04d"
 )
-
-var errPlatformNotSupported error = errors.New("functionality not supported on this platform")
-
-func TestUsbFunctionalityAvailableOnThisPlatform() (err error) {
-	if runtime.GOOS != "linux" {
-		return errPlatformNotSupported
-	}
-	return
-}
 
 // UsbSpec represents a USB device specification that should be discovered.
 // A USB device must match exactly on all the given attributes to pass.
@@ -94,12 +83,12 @@ func enumerateUSBDevices() (specs []usbDevice, err error) {
 			continue
 		}
 		// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
-		vnd, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirVendorIdFile)
+		vnd, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirVendorIDFile)
 		if err != nil {
 			// We can't read the vendor file for some reason, it probably doesn't exist.
 			continue
 		}
-		prd, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirProductIdFile)
+		prd, err := os.ReadFile(dev.Name() + "/" + usbDevicesDirProductIDFile)
 		if err != nil {
 			continue
 		}
