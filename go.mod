@@ -1,6 +1,6 @@
 module github.com/squat/generic-device-plugin
 
-go 1.15
+go 1.19
 
 require (
 	github.com/campoy/embedmd v1.0.0
