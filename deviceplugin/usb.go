@@ -80,20 +80,21 @@ func (dev *usbDevice) BusPath() (path string) {
 
 // queryUSBDeviceCharacteristicsByDirectory scans the given directory for information regarding the given USB device,
 // then returns a pointer to a new usbDevice if information is found.
+// Safe to presume that result is set if err is nil.
 func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevice, err error) {
 	if !dir.IsDir() {
 		// There shouldn't be any raw files in this directory, but just in case.
-		return
+		return result, fmt.Errorf("not a directory")
 	}
 	// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
 	vnd, err := os.ReadFile(dir.Name() + "/" + usbDevicesDirVendorIDFile)
 	if err != nil {
 		// We can't read the vendor file for some reason, it probably doesn't exist.
-		return
+		return result, err
 	}
 	prd, err := os.ReadFile(dir.Name() + "/" + usbDevicesDirProductIDFile)
 	if err != nil {
-		return
+		return result, err
 	}
 
 	// The following two calls shouldn't fail.
@@ -125,14 +126,17 @@ func enumerateUSBDevices() (specs []usbDevice, err error) {
 		return
 	}
 
+	// Set up a WaitGroup with a buffered channel for results
 	var wg sync.WaitGroup
-	for i, dev := range allDevs {
-		wg.Add(1)
+	devs := make(chan *usbDevice, len(allDevs))
 
-		// Copy the loop variables
-		i := i
+	// You could also have a shared slice with a mutex guard, but this way is arguably a little more performant.
+	for _, dev := range allDevs {
+		// Copy the loop variable
 		dev := dev
 
+		// Spawn a goroutine to discover the device information
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			result, err := queryUSBDeviceCharacteristicsByDirectory(dev)
@@ -140,13 +144,17 @@ func enumerateUSBDevices() (specs []usbDevice, err error) {
 				// do we want to handle errors here?
 				return
 			}
-			if result != nil {
-				specs[i] = *result
-			}
+			// Successful data will get thrown onto the buffered channel for later merging
+			devs <- result
 		}()
 	}
 
 	wg.Wait()
+	close(devs)
+	// Now unwind the buffer into the results array
+	for d := range devs {
+		specs = append(specs, *d)
+	}
 
 	return
 }
