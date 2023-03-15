@@ -128,7 +128,7 @@ func searchUSBDevices(devices *[]usbDevice, vendor usbID, product usbID) (devs [
 
 func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 	for _, group := range gp.ds.Groups {
-		paths := make([]string, len(group.USBSpecs))
+		var paths []string
 		usbDevs, err := enumerateUSBDevices()
 		if err != nil {
 			return devices, err
