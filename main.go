@@ -75,7 +75,7 @@ For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000
 For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
 Paths can contain lists of devices that should be grouped and mounted into a container together as one single meta-device.
 For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}
-For example, to expose a CH340 serial converter: {"name": "ch340", groups: [{"usb": [{"vendor": "1a86", "product": "7523"}]}]}
+For example, to expose a CH340 serial converter: {"name": "ch340", "groups": [{"usb": [{"vendor": "1a86", "product": "7523"}]}]}
 A "count" can be specified to allow a discovered device to be scheduled multiple times.
 Note: if omitted, "count" is assumed to be 1`)
 	pluginPath := flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
@@ -97,6 +97,7 @@ Note: if omitted, "count" is assumed to be 1`)
 	deviceTypeRegexp := regexp.MustCompile("^" + deviceTypeFmt + "$")
 	var trim string
 	deviceSpecs := make([]*deviceplugin.DeviceSpec, len(*deviceSpecsRaw))
+	var shouldTestUsbAvailable bool
 	for i, dsr := range *deviceSpecsRaw {
 		if err := json.Unmarshal([]byte(dsr), &deviceSpecs[i]); err != nil {
 			return fmt.Errorf(
@@ -118,6 +119,10 @@ Note: if omitted, "count" is assumed to be 1`)
 					dsr,
 				)
 			}
+			if len(g.UsbSpecs) > 0 {
+				// Should test USB can be used.
+				shouldTestUsbAvailable = true
+			}
 			for k := range deviceSpecs[i].Groups[j].Paths {
 				deviceSpecs[i].Groups[j].Paths[k].Path = strings.TrimSpace(deviceSpecs[i].Groups[j].Paths[k].Path)
 				deviceSpecs[i].Groups[j].Paths[k].MountPath = strings.TrimSpace(deviceSpecs[i].Groups[j].Paths[k].MountPath)
@@ -126,6 +131,13 @@ Note: if omitted, "count" is assumed to be 1`)
 	}
 	if len(deviceSpecs) == 0 {
 		return fmt.Errorf("at least one device must be specified")
+	}
+
+	if shouldTestUsbAvailable {
+		err := deviceplugin.TestUsbFunctionalityAvailableOnThisPlatform()
+		if err != nil {
+			return err
+		}
 	}
 
 	logger := log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
