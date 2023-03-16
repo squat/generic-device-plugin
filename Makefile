@@ -28,7 +28,7 @@ GO_PKGS ?= $$(go list ./... | grep -v "$(PKG)/vendor")
 GOLINT_BINARY := bin/golint
 EMBEDMD_BINARY := bin/embedmd
 
-BUILD_IMAGE ?= golang:1.15.7-alpine
+BUILD_IMAGE ?= golang:1.19.7-alpine
 
 build: $(BINS)
 

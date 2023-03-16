@@ -16,11 +16,7 @@ package deviceplugin
 
 import (
 	"context"
-	"crypto/sha1"
 	"fmt"
-	"path/filepath"
-	"sort"
-	"strconv"
 	"sync"
 	"time"
 
@@ -69,43 +65,12 @@ type Group struct {
 	// When the paths have differing cardinalities, that is, the globs match different numbers of devices,
 	// the cardinality of each path is capped at the lowest cardinality.
 	Paths []*Path `json:"paths"`
+	// USBSpecs is the list of USB specifications that this device group consists of.
+	USBSpecs []*USBSpec `json:"usb"`
 	// Count specifies how many times this group can be mounted concurrently.
 	// When unspecified, Count defaults to 1.
 	Count uint `json:"count,omitempty"`
 }
-
-// Path represents a file path that should be discovered.
-type Path struct {
-	// Path is the file path of a device in the host.
-	Path string `json:"path"`
-	// MountPath is the file path at which the host device should be mounted within the container.
-	// When unspecified, MountPath defaults to the Path.
-	MountPath string `json:"mountPath,omitempty"`
-	// Permissions is the file-system permissions given to the mounted device.
-	// Permissions applies only to mounts of type `Device`.
-	// This can be one or more of:
-	// * r - allows the container to read from the specified device.
-	// * w - allows the container to write to the specified device.
-	// * m - allows the container to create device files that do not yet exist.
-	// When unspecified, Permissions defaults to mrw.
-	Permissions string `json:"permissions,omitempty"`
-	// ReadOnly specifies whether the path should be mounted read-only.
-	// ReadOnly applies only to mounts of type `Mount`.
-	ReadOnly bool `json:"readOnly,omitempty"`
-	// Type describes what type of file-system node this Path represents and thus how it should be mounted.
-	// When unspecified, Type defaults to Device.
-	Type PathType `json:"type"`
-}
-
-// PathType represents the kinds of file-system nodes that can be scheduled.
-type PathType string
-
-const (
-	// DevicePathType represents a file-system device node and is mounted as a device.
-	DevicePathType PathType = "Device"
-	// MountPathType represents an ordinary file-system node and is bind-mounted.
-	MountPathType PathType = "Mount"
-)
 
 // device wraps the v1.beta1.Device type to add context about
 // the device needed by the GenericPlugin.
@@ -116,7 +81,7 @@ type device struct {
 }
 
 // GenericPlugin is a plugin for generic devices that can:
-// * be found using a file path; and
+// * be found using either a file path or a USB identifier; and
 // * mounted and used without special logic.
 type GenericPlugin struct {
 	ds      *DeviceSpec
@@ -156,61 +121,17 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 	return NewPlugin(ds.Name, pluginDir, gp, logger, prometheus.WrapRegistererWithPrefix("generic_", reg))
 }
 
-func (gp *GenericPlugin) discover() ([]device, error) {
-	var devices []device
-	var mountPath string
-	for _, group := range gp.ds.Groups {
-		paths := make([][]string, len(group.Paths))
-		var length int
-		// Discover all of the devices matching each pattern in the group.
-		for i, path := range group.Paths {
-			matches, err := filepath.Glob(path.Path)
-			if err != nil {
-				return nil, err
-			}
-			sort.Strings(matches)
-			paths[i] = matches
-			// Keep track of the shortest length in the group.
-			if length == 0 || len(matches) < length {
-				length = len(matches)
-			}
-		}
-		for i := 0; i < length; i++ {
-			for j := uint(0); j < group.Count; j++ {
-				h := sha1.New()
-				h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
-				d := device{
-					Device: v1beta1.Device{
-						Health: v1beta1.Healthy,
-					},
-				}
-				for k, path := range group.Paths {
-					mountPath = path.MountPath
-					if mountPath == "" {
-						mountPath = paths[k][i]
-					}
-					switch path.Type {
-					case DevicePathType:
-						d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
-							HostPath:      paths[k][i],
-							ContainerPath: mountPath,
-							Permissions:   path.Permissions,
-						})
-					case MountPathType:
-						d.mounts = append(d.mounts, &v1beta1.Mount{
-							HostPath:      paths[k][i],
-							ContainerPath: mountPath,
-							ReadOnly:      path.ReadOnly,
-						})
-					}
-					h.Write([]byte(paths[k][i]))
-				}
-				d.ID = fmt.Sprintf("%x", h.Sum(nil))
-				devices = append(devices, d)
-			}
-		}
+func (gp *GenericPlugin) discover() (devices []device, err error) {
+	path, err := gp.discoverPath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover path devices: %w", err)
 	}
-	return devices, nil
+	usb, err := gp.discoverUSB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover usb devices: %w", err)
+	}
+	// This action just bolts the usb entries onto the path ones, but we're not too worried about reuse since we're about to return anyway.
+	return append(path, usb...), nil
 }
 
 // refreshDevices updates the devices available to the
@@ -219,7 +140,7 @@ func (gp *GenericPlugin) discover() ([]device, error) {
 func (gp *GenericPlugin) refreshDevices() (bool, error) {
 	devices, err := gp.discover()
 	if err != nil {
-		return false, fmt.Errorf("failed to discover devices: %v", err)
+		return false, fmt.Errorf("failed to refresh devices: %v", err)
 	}
 
 	gp.deviceGauge.Set(float64(len(devices)))

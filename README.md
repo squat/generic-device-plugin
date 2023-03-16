@@ -77,14 +77,17 @@ Now, the MJPEG stream could be opened by pointing a browser to [http://localhost
 
 [embedmd]:# (tmp/help.txt)
 ```txt
-Usage of bin/amd64/generic-device-plugin:
       --device stringArray        The devices to expose. This flag can be repeated to specify multiple device types.
                                   Multiple paths can be given for each type. Paths can be globs.
                                   Should be provided in the form:
-                                  {"name": "<name>", "groups": [{"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}], "count": <count>}]}
+                                  {"name": "<name>", "groups": [(device definitions)], "count": <count>}]}
+                                  The device definition can be either a raw path, or a USB device. You cannot define both in the same group.
+                                  For path devices, use something like: {"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}]}
+                                  For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}]}
                                   For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
                                   Paths can contain lists of devices that should be grouped and mounted into a container together as one single meta-device.
                                   For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}
+                                  For example, to expose a CH340 serial converter: {"name": "ch340", "groups": [{"usb": [{"vendor": "1a86", "product": "7523"}]}]}
                                   A "count" can be specified to allow a discovered device to be scheduled multiple times.
                                   Note: if omitted, "count" is assumed to be 1
       --domain string             The domain to use when when declaring devices. (default "squat.ai")
