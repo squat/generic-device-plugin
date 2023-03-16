@@ -128,7 +128,7 @@ func enumerateUSBDevices() (specs []usbDevice, err error) {
 
 	// Set up a WaitGroup with a buffered channel for results
 	var wg sync.WaitGroup
-	devs := make(chan *usbDevice, len(allDevs))
+	devs := make(chan *usbDevice)
 
 	// You could also have a shared slice with a mutex guard, but this way is arguably a little more performant.
 	for _, dev := range allDevs {
@@ -149,8 +149,11 @@ func enumerateUSBDevices() (specs []usbDevice, err error) {
 		}()
 	}
 
-	wg.Wait()
-	close(devs)
+	go func() {
+		defer close(devs)
+		wg.Wait()
+	}()
+
 	// Now unwind the buffer into the results array
 	for d := range devs {
 		specs = append(specs, *d)
