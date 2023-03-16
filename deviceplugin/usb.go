@@ -39,34 +39,34 @@ const (
 type USBSpec struct {
 	// Vendor is the USB Vendor ID of the device to match on.
 	// (Both of these get mangled to uint16 for processing - but you should use the hexadecimal representation.)
-	Vendor usbID `json:"vendor"`
+	Vendor USBID `json:"vendor"`
 	// Product is the USB Product ID of the device to match on.
-	Product usbID `json:"product"`
+	Product USBID `json:"product"`
 }
 
-// usbID is a representation of a platform or vendor ID under the USB standard (see gousb.ID)
-type usbID uint16
+// USBID is a representation of a platform or vendor ID under the USB standard (see gousb.ID)
+type USBID uint16
 
 // UnmarshalJSON handles incoming standard platform / vendor IDs.
-func (id *usbID) UnmarshalJSON(data []byte) error {
+func (id *USBID) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" || string(data) == `""` {
 		return nil
 	}
-	*id = usbID(binary.LittleEndian.Uint16(data))
+	*id = USBID(binary.LittleEndian.Uint16(data))
 	return nil
 }
 
-// String returns a standardised hexadecimal representation of the usbID.
-func (id *usbID) String() string {
+// String returns a standardised hexadecimal representation of the USBID.
+func (id *USBID) String() string {
 	return fmt.Sprintf("%04x", int(*id))
 }
 
 // usbDevice represents a physical, tangible USB device.
 type usbDevice struct {
 	// Vendor is the USB Vendor ID of the device.
-	Vendor usbID `json:"vendor"`
+	Vendor USBID `json:"vendor"`
 	// Product is the USB Product ID of the device.
-	Product usbID `json:"product"`
+	Product USBID `json:"product"`
 	// Bus is the physical USB bus this device is located at.
 	Bus uint16 `json:"bus"`
 	// BusDevice is the location of the device on the Bus.
@@ -110,8 +110,8 @@ func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevic
 	busLoc := binary.LittleEndian.Uint16(busLocRaw)
 
 	res := usbDevice{
-		Vendor:    usbID(binary.LittleEndian.Uint16(vnd)),
-		Product:   usbID(binary.LittleEndian.Uint16(prd)),
+		Vendor:    USBID(binary.LittleEndian.Uint16(vnd)),
+		Product:   USBID(binary.LittleEndian.Uint16(prd)),
 		Bus:       bus,
 		BusDevice: busLoc,
 	}
@@ -163,7 +163,7 @@ func enumerateUSBDevices() (specs []usbDevice, err error) {
 }
 
 // searchUSBDevices returns a subset of the "devices" slice containing only those usbDevices that match the given vendor and product arguments.
-func searchUSBDevices(devices *[]usbDevice, vendor usbID, product usbID) (devs []usbDevice, err error) {
+func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID) (devs []usbDevice, err error) {
 	for _, dev := range *devices {
 		if dev.Vendor == vendor && dev.Product == product {
 			devs = append(devs, dev)
