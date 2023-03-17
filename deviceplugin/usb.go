@@ -100,26 +100,44 @@ func readFileToUint16(path string) (out uint16, err error) {
 		return out, err
 	}
 	// To be safe, strip out newlines
-	datastr := strings.ReplaceAll(string(bytes), "\n", "")
+	dataStr := strings.ReplaceAll(string(bytes), "\n", "")
 
 	// then attempt to parse as uint16.
-	dAsInt, err := strconv.ParseUint(datastr, 16, 16)
+	dAsInt, err := strconv.ParseUint(dataStr, 16, 16)
 	if err != nil {
-		return out, fmt.Errorf("malformed device data %q: %w", datastr, err)
+		return out, fmt.Errorf("malformed device data %q: %w", dataStr, err)
 	}
 	// Potential for overflowing, but presume we know what we're doing.
 	return uint16(dAsInt), nil
+}
+
+func resolveSymlinkToDir(path string) (absolutePath string, err error) {
+	absolutePath, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return absolutePath, err
+	}
+	pathEntry, err := os.Stat(absolutePath)
+	if err != nil {
+		return absolutePath, err
+	}
+	if !pathEntry.IsDir() {
+		return absolutePath, fmt.Errorf("not a directory")
+	}
+	return absolutePath, nil
 }
 
 // queryUSBDeviceCharacteristicsByDirectory scans the given directory for information regarding the given USB device,
 // then returns a pointer to a new usbDevice if information is found.
 // Safe to presume that result is set if err is nil.
 func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevice, err error) {
-	if !dir.IsDir() {
-		// There shouldn't be any raw files in this directory, but just in case.
-		return result, fmt.Errorf("not a directory")
-	}
 	fqPath := filepath.Join(usbDevicesDir, dir.Name())
+	// Test if symlink needs to be followed.
+	fqPath, err = resolveSymlinkToDir(fqPath)
+
+	if err != nil {
+		return result, err
+	}
+
 	// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
 	vnd, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirVendorIDFile))
 	if err != nil {
