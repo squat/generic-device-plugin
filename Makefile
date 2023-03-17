@@ -186,7 +186,7 @@ manifest-annotate-%:
 	done
 
 manifest-name:
-	@echo "manifest: $(IMAGE_ROOT):$(VERSION)"
+	@echo "manifest: $(IMAGE):$(VERSION)"
 
 push: .push-$(ARCH)-$(VERSION) push-name
 .push-$(ARCH)-$(VERSION): .container-$(ARCH)-$(VERSION)
