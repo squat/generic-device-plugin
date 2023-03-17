@@ -18,12 +18,12 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
-	"github.com/go-kit/kit/log/level"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/go-kit/kit/log/level"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
@@ -95,7 +95,7 @@ func readFileToUint16(path string) (out uint16, err error) {
 	// then attempt to parse as uint16.
 	dAsInt, err := strconv.ParseUint(datastr, 16, 16)
 	if err != nil {
-		return 0, fmt.Errorf("malformed device data %q: %w", datastr, err)
+		return out, fmt.Errorf("malformed device data %q: %w", datastr, err)
 	}
 	// Potential for overflowing, but presume we know what we're doing.
 	return uint16(dAsInt), nil
