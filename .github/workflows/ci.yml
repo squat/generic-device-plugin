@@ -104,9 +104,11 @@ jobs:
     - name: Build and push
       run: |
         make manifest
+        make clean
         REGISTRY=ghcr.io make manifest
     - name: Build and push latest
       if: github.ref == 'refs/heads/main'
       run: |
         make manifest-latest
+        make clean
         REGISTRY=ghcr.io make manifest-latest
