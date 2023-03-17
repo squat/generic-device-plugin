@@ -112,23 +112,23 @@ func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevic
 	}
 	fqPath := filepath.Join(usbDevicesDir, dir.Name())
 	// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
-	vnd, err := readFileToUint16(filepath.Join(fqPath, "/", usbDevicesDirVendorIDFile))
+	vnd, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirVendorIDFile))
 	if err != nil {
 		// We can't read the vendor file for some reason, it probably doesn't exist.
 		return result, err
 	}
 
-	prd, err := readFileToUint16(filepath.Join(fqPath, "/", usbDevicesDirProductIDFile))
+	prd, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirProductIDFile))
 	if err != nil {
 		return result, err
 	}
 
 	// The following two calls shouldn't fail if the above two exist and are readable.
-	bus, err := readFileToUint16(filepath.Join(fqPath, "/", usbDevicesDirBusFile))
+	bus, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirBusFile))
 	if err != nil {
 		return result, err
 	}
-	busLoc, err := readFileToUint16(filepath.Join(fqPath, "/", usbDevicesDirBusDevFile))
+	busLoc, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirBusDevFile))
 	if err != nil {
 		return result, err
 	}
