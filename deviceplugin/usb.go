@@ -16,7 +16,6 @@ package deviceplugin
 
 import (
 	"crypto/sha1"
-	"encoding/binary"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -52,10 +51,20 @@ type USBID uint16
 
 // UnmarshalJSON handles incoming standard platform / vendor IDs.
 func (id *USBID) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" || string(data) == `""` {
+	strData := string(data)
+	if strData == "null" || strData == `""` {
 		return nil
 	}
-	*id = USBID(binary.LittleEndian.Uint16(data))
+	// To be safe, strip out newlines and quotation marks
+	strData = strings.ReplaceAll(strData, "\n", "")
+	strData = strings.ReplaceAll(strData, "\"", "")
+
+	// then attempt to parse as uint16.
+	dAsInt, err := strconv.ParseUint(strData, 16, 16)
+	if err != nil {
+		return fmt.Errorf("malformed device data %q: %w", strData, err)
+	}
+	*id = USBID(uint16(dAsInt))
 	return nil
 }
 
