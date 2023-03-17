@@ -154,12 +154,12 @@ container-name:
 
 manifest: .manifest-$(VERSION) manifest-name
 .manifest-$(VERSION): Dockerfile $(addprefix push-, $(ALL_ARCH))
-	@docker manifest create --amend $(IMAGE):$(VERSION) $(addsuffix -$(VERSION), $(addprefix squat/$(PROJECT):, $(ALL_ARCH)))
+	@docker manifest create --amend $(IMAGE):$(VERSION) $(addsuffix -$(VERSION), $(addprefix $(IMAGE):, $(ALL_ARCH)))
 	@$(MAKE) --no-print-directory manifest-annotate-$(VERSION)
 	@docker manifest push $(IMAGE):$(VERSION) > $@
 
 manifest-latest: Dockerfile $(addprefix push-latest-, $(ALL_ARCH))
-	@docker manifest create --amend $(IMAGE):latest $(addsuffix -latest, $(addprefix squat/$(PROJECT):, $(ALL_ARCH)))
+	@docker manifest create --amend $(IMAGE):latest $(addsuffix -latest, $(addprefix $(IMAGE):, $(ALL_ARCH)))
 	@$(MAKE) --no-print-directory manifest-annotate-latest
 	@docker manifest push $(IMAGE):latest
 	@echo "manifest: $(IMAGE):latest"
@@ -194,7 +194,7 @@ push: .push-$(ARCH)-$(VERSION) push-name
 	@docker images -q $(IMAGE):$(ARCH)-$(VERSION) > $@
 
 push-latest: container-latest
-	@docker push $$(IMAGE):$(ARCH)-latest
+	@docker push $(IMAGE):$(ARCH)-latest
 	@echo "pushed: $(IMAGE):$(ARCH)-latest"
 
 push-name:
