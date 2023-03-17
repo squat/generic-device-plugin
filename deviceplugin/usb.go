@@ -16,7 +16,6 @@ package deviceplugin
 
 import (
 	"crypto/sha1"
-	"encoding/binary"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,7 +33,7 @@ const (
 	usbDevicesDirProductIDFile = "idProduct"
 	usbDevicesDirBusFile       = "busnum"
 	usbDevicesDirBusDevFile    = "devnum"
-	usbDevBus                  = "/dev/bus/usb/%+04d/%+04d"
+	usbDevBus                  = "/dev/bus/usb/%03d/%03d"
 )
 
 // USBSpec represents a USB device specification that should be discovered.
@@ -52,10 +51,20 @@ type USBID uint16
 
 // UnmarshalJSON handles incoming standard platform / vendor IDs.
 func (id *USBID) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" || string(data) == `""` {
+	strData := string(data)
+	if strData == "null" || strData == `""` {
 		return nil
 	}
-	*id = USBID(binary.LittleEndian.Uint16(data))
+	// To be safe, strip out newlines and quotation marks
+	strData = strings.ReplaceAll(strData, "\n", "")
+	strData = strings.ReplaceAll(strData, "\"", "")
+
+	// then attempt to parse as uint16.
+	dAsInt, err := strconv.ParseUint(strData, 16, 16)
+	if err != nil {
+		return fmt.Errorf("malformed device data %q: %w", strData, err)
+	}
+	*id = USBID(uint16(dAsInt))
 	return nil
 }
 
@@ -91,26 +100,44 @@ func readFileToUint16(path string) (out uint16, err error) {
 		return out, err
 	}
 	// To be safe, strip out newlines
-	datastr := strings.ReplaceAll(string(bytes), "\n", "")
+	dataStr := strings.ReplaceAll(string(bytes), "\n", "")
 
 	// then attempt to parse as uint16.
-	dAsInt, err := strconv.ParseUint(datastr, 16, 16)
+	dAsInt, err := strconv.ParseUint(dataStr, 16, 16)
 	if err != nil {
-		return out, fmt.Errorf("malformed device data %q: %w", datastr, err)
+		return out, fmt.Errorf("malformed device data %q: %w", dataStr, err)
 	}
 	// Potential for overflowing, but presume we know what we're doing.
 	return uint16(dAsInt), nil
+}
+
+func resolveSymlinkToDir(path string) (absolutePath string, err error) {
+	absolutePath, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return absolutePath, err
+	}
+	pathEntry, err := os.Stat(absolutePath)
+	if err != nil {
+		return absolutePath, err
+	}
+	if !pathEntry.IsDir() {
+		return absolutePath, fmt.Errorf("not a directory")
+	}
+	return absolutePath, nil
 }
 
 // queryUSBDeviceCharacteristicsByDirectory scans the given directory for information regarding the given USB device,
 // then returns a pointer to a new usbDevice if information is found.
 // Safe to presume that result is set if err is nil.
 func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevice, err error) {
-	if !dir.IsDir() {
-		// There shouldn't be any raw files in this directory, but just in case.
-		return result, fmt.Errorf("not a directory")
-	}
 	fqPath := filepath.Join(usbDevicesDir, dir.Name())
+	// Test if symlink needs to be followed.
+	fqPath, err = resolveSymlinkToDir(fqPath)
+
+	if err != nil {
+		return result, err
+	}
+
 	// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
 	vnd, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirVendorIDFile))
 	if err != nil {
@@ -210,7 +237,7 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 			}
 			if len(matches) > 0 {
 				for _, match := range matches {
-					level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor, dev.Product), "path", match.BusPath())
+					level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
 					paths = append(paths, match.BusPath())
 				}
 			} else {
