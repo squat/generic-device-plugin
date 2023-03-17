@@ -8,7 +8,7 @@ BINS := $(addprefix bin/$(ARCH)/,generic-device-plugin)
 PROJECT := generic-device-plugin
 PKG := github.com/squat/$(PROJECT)
 REGISTRY ?= index.docker.io
-IMAGE ?= squat/$(PROJECT)
+IMAGE ?= $(REGISTRY)/squat/$(PROJECT)
 
 TAG := $(shell git describe --abbrev=0 --tags HEAD 2>/dev/null)
 COMMIT := $(shell git rev-parse HEAD)
@@ -154,12 +154,12 @@ container-name:
 
 manifest: .manifest-$(VERSION) manifest-name
 .manifest-$(VERSION): Dockerfile $(addprefix push-, $(ALL_ARCH))
-	@docker manifest create --amend $(IMAGE):$(VERSION) $(addsuffix -$(VERSION), $(addprefix squat/$(PROJECT):, $(ALL_ARCH)))
+	@docker manifest create --amend $(IMAGE):$(VERSION) $(addsuffix -$(VERSION), $(addprefix $(IMAGE):, $(ALL_ARCH)))
 	@$(MAKE) --no-print-directory manifest-annotate-$(VERSION)
 	@docker manifest push $(IMAGE):$(VERSION) > $@
 
 manifest-latest: Dockerfile $(addprefix push-latest-, $(ALL_ARCH))
-	@docker manifest create --amend $(IMAGE):latest $(addsuffix -latest, $(addprefix squat/$(PROJECT):, $(ALL_ARCH)))
+	@docker manifest create --amend $(IMAGE):latest $(addsuffix -latest, $(addprefix $(IMAGE):, $(ALL_ARCH)))
 	@$(MAKE) --no-print-directory manifest-annotate-latest
 	@docker manifest push $(IMAGE):latest
 	@echo "manifest: $(IMAGE):latest"
@@ -186,15 +186,15 @@ manifest-annotate-%:
 	done
 
 manifest-name:
-	@echo "manifest: $(IMAGE_ROOT):$(VERSION)"
+	@echo "manifest: $(IMAGE):$(VERSION)"
 
 push: .push-$(ARCH)-$(VERSION) push-name
 .push-$(ARCH)-$(VERSION): .container-$(ARCH)-$(VERSION)
-	@docker push $(REGISTRY)/$(IMAGE):$(ARCH)-$(VERSION)
+	@docker push $(IMAGE):$(ARCH)-$(VERSION)
 	@docker images -q $(IMAGE):$(ARCH)-$(VERSION) > $@
 
 push-latest: container-latest
-	@docker push $(REGISTRY)/$(IMAGE):$(ARCH)-latest
+	@docker push $(IMAGE):$(ARCH)-latest
 	@echo "pushed: $(IMAGE):$(ARCH)-latest"
 
 push-name:
