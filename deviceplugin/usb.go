@@ -33,7 +33,7 @@ const (
 	usbDevicesDirProductIDFile = "idProduct"
 	usbDevicesDirBusFile       = "busnum"
 	usbDevicesDirBusDevFile    = "devnum"
-	usbDevBus                  = "/dev/bus/usb/%+04d/%+04d"
+	usbDevBus                  = "/dev/bus/usb/%03d/%03d"
 )
 
 // USBSpec represents a USB device specification that should be discovered.
@@ -237,7 +237,7 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 			}
 			if len(matches) > 0 {
 				for _, match := range matches {
-					level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor, dev.Product), "path", match.BusPath())
+					level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
 					paths = append(paths, match.BusPath())
 				}
 			} else {
