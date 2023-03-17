@@ -8,7 +8,7 @@ BINS := $(addprefix bin/$(ARCH)/,generic-device-plugin)
 PROJECT := generic-device-plugin
 PKG := github.com/squat/$(PROJECT)
 REGISTRY ?= index.docker.io
-IMAGE ?= squat/$(PROJECT)
+IMAGE ?= $(REGISTRY)/squat/$(PROJECT)
 
 TAG := $(shell git describe --abbrev=0 --tags HEAD 2>/dev/null)
 COMMIT := $(shell git rev-parse HEAD)
@@ -190,11 +190,11 @@ manifest-name:
 
 push: .push-$(ARCH)-$(VERSION) push-name
 .push-$(ARCH)-$(VERSION): .container-$(ARCH)-$(VERSION)
-	@docker push $(REGISTRY)/$(IMAGE):$(ARCH)-$(VERSION)
+	@docker push $(IMAGE):$(ARCH)-$(VERSION)
 	@docker images -q $(IMAGE):$(ARCH)-$(VERSION) > $@
 
 push-latest: container-latest
-	@docker push $(REGISTRY)/$(IMAGE):$(ARCH)-latest
+	@docker push $$(IMAGE):$(ARCH)-latest
 	@echo "pushed: $(IMAGE):$(ARCH)-latest"
 
 push-name:
