@@ -8,7 +8,7 @@ BINS := $(addprefix bin/$(ARCH)/,generic-device-plugin)
 PROJECT := generic-device-plugin
 PKG := github.com/squat/$(PROJECT)
 REGISTRY ?= index.docker.io
-IMAGE ?= squat/$(PROJECT)
+IMAGE ?= $(REGISTRY)/squat/$(PROJECT)
 
 TAG := $(shell git describe --abbrev=0 --tags HEAD 2>/dev/null)
 COMMIT := $(shell git rev-parse HEAD)
@@ -135,38 +135,39 @@ header: .header
 		exit 1; \
 	fi
 
-container: .container-$(ARCH)-$(VERSION) container-name
-.container-$(ARCH)-$(VERSION): $(BINS) Dockerfile
+container: .container/$(IMAGE)/$(ARCH)-$(VERSION) container-name
+.container/$(IMAGE)/$(ARCH)-$(VERSION): $(BINS) Dockerfile
 	@i=0; for a in $(ALL_ARCH); do [ "$$a" = $(ARCH) ] && break; i=$$((i+1)); done; \
 	ia=""; iv=""; \
 	j=0; for a in $(DOCKER_ARCH); do \
 	    [ "$$i" -eq "$$j" ] && ia=$$(echo "$$a" | awk '{print $$1}') && iv=$$(echo "$$a" | awk '{print $$2}') && break; j=$$((j+1)); \
 	done; \
 	docker build -t $(IMAGE):$(ARCH)-$(VERSION) --build-arg GOARCH=$(ARCH) .
+	@mkdir -p $$(dirname $@)
 	@docker images -q $(IMAGE):$(ARCH)-$(VERSION) > $@
 
-container-latest: .container-$(ARCH)-$(VERSION)
+container-latest: .container/$(IMAGE)/$(ARCH)-$(VERSION)
 	@docker tag $(IMAGE):$(ARCH)-$(VERSION) $(IMAGE):$(ARCH)-latest
 	@echo "container: $(IMAGE):$(ARCH)-latest"
 
 container-name:
 	@echo "container: $(IMAGE):$(ARCH)-$(VERSION)"
 
-manifest: .manifest-$(VERSION) manifest-name
-.manifest-$(VERSION): Dockerfile $(addprefix push-, $(ALL_ARCH))
-	@docker manifest create --amend $(IMAGE):$(VERSION) $(addsuffix -$(VERSION), $(addprefix squat/$(PROJECT):, $(ALL_ARCH)))
-	@$(MAKE) --no-print-directory manifest-annotate-$(VERSION)
+manifest: .manifest/$(IMAGE)/$(VERSION) manifest-name
+.manifest/$(IMAGE)/$(VERSION): Dockerfile $(addprefix push-, $(ALL_ARCH))
+	@docker manifest create --amend $(IMAGE):$(VERSION) $(addsuffix -$(VERSION), $(addprefix $(IMAGE):, $(ALL_ARCH)))
+	@$(MAKE) --no-print-directory manifest-annotate/$(IMAGE)/$(VERSION)
+	@mkdir -p $$(dirname $@)
 	@docker manifest push $(IMAGE):$(VERSION) > $@
 
-manifest-latest: Dockerfile $(addprefix push-latest-, $(ALL_ARCH))
-	@docker manifest create --amend $(IMAGE):latest $(addsuffix -latest, $(addprefix squat/$(PROJECT):, $(ALL_ARCH)))
-	@$(MAKE) --no-print-directory manifest-annotate-latest
+manifest-latest: Dockerfile $(addprefix push/$(IMAGE)/latest-, $(ALL_ARCH))
+	@docker manifest create --amend $(IMAGE):latest $(addsuffix -latest, $(addprefix $(IMAGE):, $(ALL_ARCH)))
+	@$(MAKE) --no-print-directory manifest-annotate/$(IMAGE)/latest
 	@docker manifest push $(IMAGE):latest
 	@echo "manifest: $(IMAGE):latest"
 
-manifest-annotate: manifest-annotate-$(VERSION)
-
-manifest-annotate-%:
+manifest-annotate: manifest-annotate/$(IMAGE)/$(VERSION)
+manifest-annotate/$(IMAGE)/%:
 	@i=0; \
 	for a in $(ALL_ARCH); do \
 	    annotate=; \
@@ -186,15 +187,16 @@ manifest-annotate-%:
 	done
 
 manifest-name:
-	@echo "manifest: $(IMAGE_ROOT):$(VERSION)"
+	@echo "manifest: $(IMAGE):$(VERSION)"
 
-push: .push-$(ARCH)-$(VERSION) push-name
-.push-$(ARCH)-$(VERSION): .container-$(ARCH)-$(VERSION)
-	@docker push $(REGISTRY)/$(IMAGE):$(ARCH)-$(VERSION)
+push: .push/$(IMAGE)/$(ARCH)-$(VERSION) push-name
+.push/$(IMAGE)/$(ARCH)-$(VERSION): .container/$(IMAGE)/$(ARCH)-$(VERSION)
+	@docker push $(IMAGE):$(ARCH)-$(VERSION)
+	@mkdir -p $$(dirname $@)
 	@docker images -q $(IMAGE):$(ARCH)-$(VERSION) > $@
 
 push-latest: container-latest
-	@docker push $(REGISTRY)/$(IMAGE):$(ARCH)-latest
+	@docker push $(IMAGE):$(ARCH)-latest
 	@echo "pushed: $(IMAGE):$(ARCH)-latest"
 
 push-name:
