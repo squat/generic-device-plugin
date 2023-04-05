@@ -241,8 +241,7 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 					paths = append(paths, match.BusPath())
 				}
 			} else {
-				// Should this be a Warn? It's very unusual, that's for sure...
-				level.Info(gp.logger).Log("msg", "no USB devices found attached to system")
+				level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
 			}
 		}
 		if len(paths) > 0 {
