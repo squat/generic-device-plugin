@@ -45,6 +45,12 @@ type Path struct {
 	// Type describes what type of file-system node this Path represents and thus how it should be mounted.
 	// When unspecified, Type defaults to Device.
 	Type PathType `json:"type"`
+	// Limit specifies up to how many times this device can be used in the group concurrently when other devices
+	// in the group yield more matches.
+	// For example, if one path in the group matches 5 devices and another matches 1 device but has a limit of 10,
+	// then the group will provide 5 pairs of devices.
+	// When unspecified, Limit defaults to 1.
+	Limit uint `json:"limit,omitempty"`
 }
 
 // PathType represents the kinds of file-system nodes that can be scheduled.
@@ -63,6 +69,7 @@ func (gp *GenericPlugin) discoverPath() ([]device, error) {
 	for _, group := range gp.ds.Groups {
 		paths := make([][]string, len(group.Paths))
 		var length int
+		var limitLength int
 		// Discover all the devices matching each pattern in the Paths group.
 		for i, path := range group.Paths {
 			matches, err := filepath.Glob(path.Path)
@@ -70,11 +77,21 @@ func (gp *GenericPlugin) discoverPath() ([]device, error) {
 				return nil, err
 			}
 			sort.Strings(matches)
-			paths[i] = matches
-			// Keep track of the shortest length in the group.
-			if length == 0 || len(matches) < length {
+			for j := uint(0); j < path.Limit; j++ {
+				paths[i] = append(paths[i], matches...)
+			}
+			// Keep track of the shortest reusable length in the group.
+			if limitLength == 0 || len(paths[i]) < limitLength {
+				limitLength = len(paths[i])
+			}
+			// Keep track of the greatest natural length in the group.
+			if len(matches) > length {
 				length = len(matches)
 			}
+		}
+		// Cap the length at the maximum reusable length.
+		if length > limitLength {
+			length = limitLength
 		}
 		for i := 0; i < length; i++ {
 			for j := uint(0); j < group.Count; j++ {
