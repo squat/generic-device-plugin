@@ -48,6 +48,9 @@ func (d *DeviceSpec) Default() {
 			g.Count = 1
 		}
 		for _, p := range g.Paths {
+			if p.Limit == 0 {
+				p.Limit = 1
+			}
 			if p.Type == "" {
 				p.Type = DevicePathType
 			}
