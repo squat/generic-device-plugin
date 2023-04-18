@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -34,12 +33,10 @@ import (
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	flag "github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-
+	"github.com/spf13/viper"
 	"github.com/squat/generic-device-plugin/deviceplugin"
 	"github.com/squat/generic-device-plugin/version"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -49,8 +46,6 @@ const (
 	logLevelWarn  = "warn"
 	logLevelError = "error"
 	logLevelNone  = "none"
-
-	defaultDomain = "squat.ai"
 )
 
 var (
@@ -73,60 +68,41 @@ func testUSBFunctionalityAvailableOnThisPlatform() (err error) {
 
 // Main is the principal function for the binary, wrapped only by `main` for convenience.
 func Main() error {
-	domain := flag.String("domain", defaultDomain, "The domain to use when when declaring devices.")
-	deviceSpecsRaw := flag.StringArray("device", nil, `The devices to expose. This flag can be repeated to specify multiple device types.
-Multiple paths can be given for each type. Paths can be globs.
-Should be provided in the form:
-{"name": "<name>", "groups": [(device definitions)], "count": <count>}]}
-The device definition can be either a path to a device file or a USB device. You cannot define both in the same group.
-For device files, use something like: {"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}]}
-For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}]}
-For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
-The device flag can specify lists of devices that should be grouped and mounted into a container together as one single meta-device.
-For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}
-For example, to expose a CH340 serial converter: {"name": "ch340", "groups": [{"usb": [{"vendor": "1a86", "product": "7523"}]}]}
-A "count" can be specified to allow a discovered device group to be scheduled multiple times.
-For example, to permit allocation of the FUSE device 10 times: {"name": "fuse", "groups": [{"count": 10, "paths": [{"path": "/dev/fuse"}]}]}
-Note: if omitted, "count" is assumed to be 1`)
-	pluginPath := flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
-	logLevel := flag.String("log-level", logLevelInfo, fmt.Sprintf("Log level to use. Possible values: %s", availableLogLevels))
-	listen := flag.String("listen", ":8080", "The address at which to listen for health and metrics.")
-	printVersion := flag.Bool("version", false, "Print version and exit")
-	flag.Parse()
+	if err := InitConfig(); err != nil {
+		return err
+	}
 
-	if *printVersion {
+	if viper.GetBool("version") {
 		fmt.Println(version.Version)
 		return nil
 	}
 
-	if errs := validation.IsDNS1123Subdomain(*domain); len(errs) > 0 {
-		return fmt.Errorf("failed to parse domain %q: %s", *domain, strings.Join(errs, ", "))
+	domain := viper.GetString("domain")
+	if errs := validation.IsDNS1123Subdomain(domain); len(errs) > 0 {
+		return fmt.Errorf("failed to parse domain %q: %s", domain, strings.Join(errs, ", "))
 	}
 
 	deviceTypeFmt := "[a-z0-9][-a-z0-9]*[a-z0-9]"
 	deviceTypeRegexp := regexp.MustCompile("^" + deviceTypeFmt + "$")
 	var trim string
-	deviceSpecs := make([]*deviceplugin.DeviceSpec, len(*deviceSpecsRaw))
 	var shouldTestUSBAvailable bool
-	for i, dsr := range *deviceSpecsRaw {
-		if err := json.Unmarshal([]byte(dsr), &deviceSpecs[i]); err != nil {
-			return fmt.Errorf(
-				"failed to parse device %q; see --help",
-				dsr,
-			)
-		}
+	deviceSpecs, err := GetDevices()
+	if err != nil {
+		return err
+	}
+	for i, dsr := range deviceSpecs {
 		// Apply defaults.
 		deviceSpecs[i].Default()
 		trim = strings.TrimSpace(deviceSpecs[i].Name)
 		if !deviceTypeRegexp.MatchString(trim) {
-			return fmt.Errorf("failed to parse device %q; device type must match the regular expression %q", dsr, deviceTypeFmt)
+			return fmt.Errorf("failed to parse device %s; device type must match the regular expression %q", dsr.Name, deviceTypeFmt)
 		}
-		deviceSpecs[i].Name = path.Join(*domain, trim)
+		deviceSpecs[i].Name = path.Join(viper.GetString("domain"), trim)
 		for j, g := range deviceSpecs[i].Groups {
 			if len(g.Paths) > 0 && len(g.USBSpecs) > 0 {
 				return fmt.Errorf(
-					"failed to parse device %q; cannot define both path and usb at the same time",
-					dsr,
+					"failed to parse device %s; cannot define both path and usb at the same time",
+					dsr.Name,
 				)
 			}
 			if len(g.USBSpecs) > 0 {
@@ -151,7 +127,8 @@ Note: if omitted, "count" is assumed to be 1`)
 	}
 
 	logger := log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
-	switch *logLevel {
+	logLevel := viper.GetString("log-level")
+	switch logLevel {
 	case logLevelAll:
 		logger = level.NewFilter(logger, level.AllowAll())
 	case logLevelDebug:
@@ -165,7 +142,7 @@ Note: if omitted, "count" is assumed to be 1`)
 	case logLevelNone:
 		logger = level.NewFilter(logger, level.AllowNone())
 	default:
-		return fmt.Errorf("log level %v unknown; possible values are: %s", *logLevel, availableLogLevels)
+		return fmt.Errorf("log level %v unknown; possible values are: %s", logLevel, availableLogLevels)
 	}
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
@@ -184,9 +161,10 @@ Note: if omitted, "count" is assumed to be 1`)
 			w.WriteHeader(http.StatusOK)
 		})
 		mux.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
-		l, err := net.Listen("tcp", *listen)
+		listen := viper.GetString("listen")
+		l, err := net.Listen("tcp", listen)
 		if err != nil {
-			return fmt.Errorf("failed to listen on %s: %v", *listen, err)
+			return fmt.Errorf("failed to listen on %s: %v", listen, err)
 		}
 
 		g.Add(func() error {
@@ -219,10 +197,11 @@ Note: if omitted, "count" is assumed to be 1`)
 		})
 	}
 
+	pluginPath := viper.GetString("plugin-directory")
 	for i := range deviceSpecs {
 		d := deviceSpecs[i]
 		ctx, cancel := context.WithCancel(context.Background())
-		gp := deviceplugin.NewGenericPlugin(d, *pluginPath, log.With(logger, "resource", d.Name), prometheus.WrapRegistererWith(prometheus.Labels{"resource": d.Name}, r))
+		gp := deviceplugin.NewGenericPlugin(d, pluginPath, log.With(logger, "resource", d.Name), prometheus.WrapRegistererWith(prometheus.Labels{"resource": d.Name}, r))
 		// Start the generic device plugin server.
 		g.Add(func() error {
 			logger.Log("msg", fmt.Sprintf("Starting the generic-device-plugin for %q.", d.Name))

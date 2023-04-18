@@ -19,11 +19,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/go-kit/kit/log/level"
+	"gopkg.in/yaml.v3"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
@@ -41,17 +43,17 @@ const (
 type USBSpec struct {
 	// Vendor is the USB Vendor ID of the device to match on.
 	// (Both of these get mangled to uint16 for processing - but you should use the hexadecimal representation.)
-	Vendor USBID `json:"vendor"`
+	Vendor USBID `yaml:"vendor"`
 	// Product is the USB Product ID of the device to match on.
-	Product USBID `json:"product"`
+	Product USBID `yaml:"product"`
 }
 
 // USBID is a representation of a platform or vendor ID under the USB standard (see gousb.ID)
 type USBID uint16
 
-// UnmarshalJSON handles incoming standard platform / vendor IDs.
-func (id *USBID) UnmarshalJSON(data []byte) error {
-	strData := string(data)
+// UnmarshalYAML handles YAML decode of standard platform / vendor IDs.
+func (id *USBID) UnmarshalYAML(value *yaml.Node) error {
+	strData := value.Value
 	if strData == "null" || strData == `""` {
 		return nil
 	}
@@ -73,16 +75,30 @@ func (id *USBID) String() string {
 	return fmt.Sprintf("%04x", int(*id))
 }
 
+// ToUSBIDHookFunc handles mapstructure decode of standard platform / vendor IDs.
+func ToUSBIDHookFunc(f, t reflect.Type, data interface{}) (interface{}, error) {
+	if t != reflect.TypeOf(USBID(0)) {
+		return data, nil
+	}
+
+	switch f.Kind() {
+	case reflect.String:
+		return strconv.ParseUint(data.(string), 16, 16)
+	default:
+		return data, nil
+	}
+}
+
 // usbDevice represents a physical, tangible USB device.
 type usbDevice struct {
 	// Vendor is the USB Vendor ID of the device.
-	Vendor USBID `json:"vendor"`
+	Vendor USBID `yaml:"vendor"`
 	// Product is the USB Product ID of the device.
-	Product USBID `json:"product"`
+	Product USBID `yaml:"product"`
 	// Bus is the physical USB bus this device is located at.
-	Bus uint16 `json:"bus"`
+	Bus uint16 `yaml:"bus"`
 	// BusDevice is the location of the device on the Bus.
-	BusDevice uint16 `json:"busdev"`
+	BusDevice uint16 `yaml:"busdev"`
 }
 
 // BusPath returns the platform-correct path to the raw device.
