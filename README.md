@@ -78,7 +78,7 @@ Now, the MJPEG stream could be opened by pointing a browser to [http://localhost
 [embedmd]:# (tmp/help.txt)
 ```txt
 Usage of bin/amd64/generic-device-plugin:
-      --config-file string        Path to the config file.
+      --config string             Path to the config file.
       --device stringArray        The devices to expose. This flag can be repeated to specify multiple device types.
                                   Multiple paths can be given for each type. Paths can be globs.
                                   Should be provided in the form:

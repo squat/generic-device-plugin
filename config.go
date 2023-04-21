@@ -31,7 +31,7 @@ const defaultDomain = "squat.ai"
 
 // initConfig defines config flags, config file, and envs
 func initConfig() error {
-	cfgFile := flag.String("config-file", "", "Path to the config file.")
+	cfgFile := flag.String("config", "", "Path to the config file.")
 	flag.String("domain", defaultDomain, "The domain to use when when declaring devices.")
 	flag.StringArray("device", nil, `The devices to expose. This flag can be repeated to specify multiple device types.
 Multiple paths can be given for each type. Paths can be globs.
