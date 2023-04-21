@@ -25,7 +25,6 @@ import (
 	"sync"
 
 	"github.com/go-kit/kit/log/level"
-	"gopkg.in/yaml.v3"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
@@ -43,17 +42,17 @@ const (
 type USBSpec struct {
 	// Vendor is the USB Vendor ID of the device to match on.
 	// (Both of these get mangled to uint16 for processing - but you should use the hexadecimal representation.)
-	Vendor USBID `yaml:"vendor"`
+	Vendor USBID `json:"vendor"`
 	// Product is the USB Product ID of the device to match on.
-	Product USBID `yaml:"product"`
+	Product USBID `json:"product"`
 }
 
 // USBID is a representation of a platform or vendor ID under the USB standard (see gousb.ID)
 type USBID uint16
 
-// UnmarshalYAML handles YAML decode of standard platform / vendor IDs.
-func (id *USBID) UnmarshalYAML(value *yaml.Node) error {
-	strData := value.Value
+// UnmarshalJSON handles incoming standard platform / vendor IDs.
+func (id *USBID) UnmarshalJSON(data []byte) error {
+	strData := string(data)
 	if strData == "null" || strData == `""` {
 		return nil
 	}
@@ -92,13 +91,13 @@ func ToUSBIDHookFunc(f, t reflect.Type, data interface{}) (interface{}, error) {
 // usbDevice represents a physical, tangible USB device.
 type usbDevice struct {
 	// Vendor is the USB Vendor ID of the device.
-	Vendor USBID `yaml:"vendor"`
+	Vendor USBID `json:"vendor"`
 	// Product is the USB Product ID of the device.
-	Product USBID `yaml:"product"`
+	Product USBID `json:"product"`
 	// Bus is the physical USB bus this device is located at.
-	Bus uint16 `yaml:"bus"`
+	Bus uint16 `json:"bus"`
 	// BusDevice is the location of the device on the Bus.
-	BusDevice uint16 `yaml:"busdev"`
+	BusDevice uint16 `json:"busdev"`
 }
 
 // BusPath returns the platform-correct path to the raw device.

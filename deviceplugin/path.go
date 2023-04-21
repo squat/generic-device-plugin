@@ -27,10 +27,10 @@ import (
 // Path represents a file path that should be discovered.
 type Path struct {
 	// Path is the file path of a device in the host.
-	Path string `yaml:"path"`
+	Path string `json:"path"`
 	// MountPath is the file path at which the host device should be mounted within the container.
 	// When unspecified, MountPath defaults to the Path.
-	MountPath string `yaml:"mountPath,omitempty"`
+	MountPath string `json:"mountPath,omitempty"`
 	// Permissions is the file-system permissions given to the mounted device.
 	// Permissions apply only to mounts of type `Device`.
 	// This can be one or more of:
@@ -38,19 +38,19 @@ type Path struct {
 	// * w - allows the container to write to the specified device.
 	// * m - allows the container to create device files that do not yet exist.
 	// When unspecified, Permissions defaults to mrw.
-	Permissions string `yaml:"permissions,omitempty"`
+	Permissions string `json:"permissions,omitempty"`
 	// ReadOnly specifies whether the path should be mounted read-only.
 	// ReadOnly applies only to mounts of type `Mount`.
-	ReadOnly bool `yaml:"readOnly,omitempty"`
+	ReadOnly bool `json:"readOnly,omitempty"`
 	// Type describes what type of file-system node this Path represents and thus how it should be mounted.
 	// When unspecified, Type defaults to Device.
-	Type PathType `yaml:"type"`
+	Type PathType `json:"type"`
 	// Limit specifies up to how many times this device can be used in the group concurrently when other devices
 	// in the group yield more matches.
 	// For example, if one path in the group matches 5 devices and another matches 1 device but has a limit of 10,
 	// then the group will provide 5 pairs of devices.
 	// When unspecified, Limit defaults to 1.
-	Limit uint `yaml:"limit,omitempty"`
+	Limit uint `json:"limit,omitempty"`
 }
 
 // PathType represents the kinds of file-system nodes that can be scheduled.

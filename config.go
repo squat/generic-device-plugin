@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/mitchellh/mapstructure"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/squat/generic-device-plugin/deviceplugin"
-	"gopkg.in/yaml.v3"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
@@ -101,7 +101,7 @@ func getConfiguredDevices() ([]*deviceplugin.DeviceSpec, error) {
 		for i, data := range raw {
 			decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 				Result:  &deviceSpecs[i],
-				TagName: "yaml",
+				TagName: "json",
 				DecodeHook: mapstructure.ComposeDecodeHookFunc(
 					deviceplugin.ToUSBIDHookFunc,
 				),

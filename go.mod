@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/campoy/embedmd v1.0.0
+	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680
 	github.com/go-kit/kit v0.9.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oklog/run v1.1.0
@@ -12,7 +13,6 @@ require (
 	github.com/spf13/viper v1.15.0
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
 	google.golang.org/grpc v1.52.0
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.20.5
 	k8s.io/kubelet v0.20.5
 )
@@ -43,4 +43,6 @@ require (
 	google.golang.org/genproto v0.0.0-20221227171554-f9683d7f8bef // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/yaml.v2 v2.3.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

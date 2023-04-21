@@ -36,9 +36,9 @@ const (
 // as an atomic unit.
 type DeviceSpec struct {
 	// Name is a unique string representing the kind of device this specification describes.
-	Name string `yaml:"name"`
+	Name string `json:"name"`
 	// Groups is a list of groups of devices that should be scheduled under the same name.
-	Groups []*Group `yaml:"groups"`
+	Groups []*Group `json:"groups"`
 }
 
 // Default applies default values for all fields that can be left empty.
@@ -67,12 +67,12 @@ type Group struct {
 	// Paths can be globs, in which case each device matched by the path will be schedulable `Count` times.
 	// When the paths have differing cardinalities, that is, the globs match different numbers of devices,
 	// the cardinality of each path is capped at the lowest cardinality.
-	Paths []*Path `yaml:"paths"`
+	Paths []*Path `json:"paths"`
 	// USBSpecs is the list of USB specifications that this device group consists of.
-	USBSpecs []*USBSpec `yaml:"usb"`
+	USBSpecs []*USBSpec `json:"usb"`
 	// Count specifies how many times this group can be mounted concurrently.
 	// When unspecified, Count defaults to 1.
-	Count uint `yaml:"count,omitempty"`
+	Count uint `json:"count,omitempty"`
 }
 
 // device wraps the v1.beta1.Device type to add context about
