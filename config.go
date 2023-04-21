@@ -22,8 +22,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/squat/generic-device-plugin/deviceplugin"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"github.com/squat/generic-device-plugin/deviceplugin"
 )
 
 const defaultDomain = "squat.ai"

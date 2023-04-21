@@ -34,9 +34,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
+	"k8s.io/apimachinery/pkg/util/validation"
+
 	"github.com/squat/generic-device-plugin/deviceplugin"
 	"github.com/squat/generic-device-plugin/version"
-	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
