@@ -90,7 +90,7 @@ fmt:
 
 lint: header $(GOLINT_BINARY)
 	@echo 'go vet $(GO_PKGS)'
-	@vet_res=$$(GO111MODULE=on go vet -mod=vendor $(GO_PKGS) 2>&1); if [ -n "$$vet_res" ]; then \
+	@vet_res=$$(GO111MODULE=on go vet $(GO_PKGS) 2>&1); if [ -n "$$vet_res" ]; then \
 		echo ""; \
 		echo "Go vet found issues. Please check the reported issues"; \
 		echo "and fix them if necessary before submitting the code for review:"; \
@@ -115,7 +115,7 @@ lint: header $(GOLINT_BINARY)
 	fi
 
 unit:
-	go test -mod=vendor --race ./...
+	go test --race ./...
 
 test: lint unit
 
@@ -221,7 +221,7 @@ README.md: $(EMBEDMD_BINARY) tmp/help.txt
 	$(EMBEDMD_BINARY) -w $@
 
 $(GOLINT_BINARY):
-	go build -mod=vendor -o $@ golang.org/x/lint/golint
+	go build -o $@ golang.org/x/lint/golint
 
 $(EMBEDMD_BINARY):
-	go build -mod=vendor -o $@ github.com/campoy/embedmd
+	go build -o $@ github.com/campoy/embedmd

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,6 +72,20 @@ func (id *USBID) UnmarshalJSON(data []byte) error {
 // String returns a standardised hexadecimal representation of the USBID.
 func (id *USBID) String() string {
 	return fmt.Sprintf("%04x", int(*id))
+}
+
+// ToUSBIDHookFunc handles mapstructure decode of standard platform / vendor IDs.
+func ToUSBIDHookFunc(f, t reflect.Type, data interface{}) (interface{}, error) {
+	if t != reflect.TypeOf(USBID(0)) {
+		return data, nil
+	}
+
+	switch f.Kind() {
+	case reflect.String:
+		return strconv.ParseUint(data.(string), 16, 16)
+	default:
+		return data, nil
+	}
 }
 
 // usbDevice represents a physical, tangible USB device.
