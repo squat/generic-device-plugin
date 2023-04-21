@@ -53,7 +53,7 @@ Note: if omitted, "count" is assumed to be 1`)
 
 	flag.Parse()
 	if err := viper.BindPFlags(flag.CommandLine); err != nil {
-		return fmt.Errorf("failed to bind setup config: %w", err)
+		return fmt.Errorf("failed to bind config: %w", err)
 	}
 
 	if *cfgFile != "" {
@@ -111,11 +111,11 @@ func getConfiguredDevices() ([]*deviceplugin.DeviceSpec, error) {
 			}
 
 			if err := decoder.Decode(data); err != nil {
-				return nil, fmt.Errorf("failed to assign device %q: %w", data, err)
+				return nil, fmt.Errorf("failed to decode device data %q: %w", data, err)
 			}
 		}
 		return deviceSpecs, nil
 	default:
-		return nil, fmt.Errorf("failed to fetch devices: unexpected type: %T", raw)
+		return nil, fmt.Errorf("failed to decode devices: unexpected type: %T", raw)
 	}
 }

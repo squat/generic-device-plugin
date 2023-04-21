@@ -95,13 +95,13 @@ func Main() error {
 		deviceSpecs[i].Default()
 		trim = strings.TrimSpace(deviceSpecs[i].Name)
 		if !deviceTypeRegexp.MatchString(trim) {
-			return fmt.Errorf("failed to parse device %s; device type must match the regular expression %q", dsr.Name, deviceTypeFmt)
+			return fmt.Errorf("failed to parse device %q; device type must match the regular expression %q", dsr.Name, deviceTypeFmt)
 		}
 		deviceSpecs[i].Name = path.Join(viper.GetString("domain"), trim)
 		for j, g := range deviceSpecs[i].Groups {
 			if len(g.Paths) > 0 && len(g.USBSpecs) > 0 {
 				return fmt.Errorf(
-					"failed to parse device %s; cannot define both path and usb at the same time",
+					"failed to parse device %q; cannot define both path and usb at the same time",
 					dsr.Name,
 				)
 			}
