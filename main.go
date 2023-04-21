@@ -68,7 +68,7 @@ func testUSBFunctionalityAvailableOnThisPlatform() (err error) {
 
 // Main is the principal function for the binary, wrapped only by `main` for convenience.
 func Main() error {
-	if err := InitConfig(); err != nil {
+	if err := initConfig(); err != nil {
 		return err
 	}
 
@@ -86,7 +86,7 @@ func Main() error {
 	deviceTypeRegexp := regexp.MustCompile("^" + deviceTypeFmt + "$")
 	var trim string
 	var shouldTestUSBAvailable bool
-	deviceSpecs, err := GetDevices()
+	deviceSpecs, err := getConfiguredDevices()
 	if err != nil {
 		return err
 	}

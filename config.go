@@ -28,8 +28,8 @@ import (
 
 const defaultDomain = "squat.ai"
 
-// InitConfig defines config flags, config file, and envs
-func InitConfig() error {
+// initConfig defines config flags, config file, and envs
+func initConfig() error {
 	cfgFile := flag.String("config-file", "", "Path to the config file.")
 	flag.String("domain", defaultDomain, "The domain to use when when declaring devices.")
 	flag.StringArray("device", nil, `The devices to expose. This flag can be repeated to specify multiple device types.
@@ -83,8 +83,8 @@ Note: if omitted, "count" is assumed to be 1`)
 	return nil
 }
 
-// GetDevices returns a list of configured devices
-func GetDevices() ([]*deviceplugin.DeviceSpec, error) {
+// getConfiguredDevices returns a list of configured devices
+func getConfiguredDevices() ([]*deviceplugin.DeviceSpec, error) {
 	switch raw := viper.Get("device").(type) {
 	case []string:
 		// Assign deviceSpecs from flag
