@@ -61,7 +61,6 @@ Note: if omitted, "count" is assumed to be 1`)
 	} else {
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
-		viper.AddConfigPath("/config/")
 		viper.AddConfigPath("/etc/generic-device-plugin/")
 		viper.AddConfigPath(".")
 	}
