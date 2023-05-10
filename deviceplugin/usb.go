@@ -189,7 +189,7 @@ func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevic
 func enumerateUSBDevices(dir string) (specs []usbDevice, err error) {
 	allDevs, err := os.ReadDir(dir)
 	if err != nil {
-		return
+		return []usbDevice{}, err
 	}
 
 	// Set up a WaitGroup with a buffered channel for results
@@ -241,43 +241,49 @@ func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID) (devs [
 func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 	for _, group := range gp.ds.Groups {
 		var paths []string
-		usbDevs, err := enumerateUSBDevices(usbDevicesDir)
-		if err != nil {
-			return devices, err
-		}
-		for _, dev := range group.USBSpecs {
-			matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product)
+
+		if !gp.skipUSBEnumeration {
+			usbDevs, err := enumerateUSBDevices(usbDevicesDir)
 			if err != nil {
-				return nil, err
+				level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %s", err.Error()))
+				gp.skipUSBEnumeration = true
+				return devices, nil
 			}
-			if len(matches) > 0 {
-				for _, match := range matches {
-					level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
-					paths = append(paths, match.BusPath())
+
+			for _, dev := range group.USBSpecs {
+				matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product)
+				if err != nil {
+					return nil, err
 				}
-			} else {
-				level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
+				if len(matches) > 0 {
+					for _, match := range matches {
+						level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
+						paths = append(paths, match.BusPath())
+					}
+				} else {
+					level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
+				}
 			}
-		}
-		if len(paths) > 0 {
-			for j := uint(0); j < group.Count; j++ {
-				h := sha1.New()
-				h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
-				d := device{
-					Device: v1beta1.Device{
-						Health: v1beta1.Healthy,
-					},
+			if len(paths) > 0 {
+				for j := uint(0); j < group.Count; j++ {
+					h := sha1.New()
+					h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
+					d := device{
+						Device: v1beta1.Device{
+							Health: v1beta1.Healthy,
+						},
+					}
+					for _, path := range paths {
+						d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
+							HostPath:      path,
+							ContainerPath: path,
+							Permissions:   "rw",
+						})
+						h.Write([]byte(path))
+					}
+					d.ID = fmt.Sprintf("%x", h.Sum(nil))
+					devices = append(devices, d)
 				}
-				for _, path := range paths {
-					d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
-						HostPath:      path,
-						ContainerPath: path,
-						Permissions:   "rw",
-					})
-					h.Write([]byte(path))
-				}
-				d.ID = fmt.Sprintf("%x", h.Sum(nil))
-				devices = append(devices, d)
 			}
 		}
 	}

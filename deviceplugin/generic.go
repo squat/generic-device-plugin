@@ -95,6 +95,7 @@ type GenericPlugin struct {
 	// metrics
 	deviceGauge        prometheus.Gauge
 	allocationsCounter prometheus.Counter
+	skipUSBEnumeration bool
 }
 
 // NewGenericPlugin creates a new plugin for a generic device.
