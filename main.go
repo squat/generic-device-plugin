@@ -201,8 +201,17 @@ func Main() error {
 	pluginPath := viper.GetString("plugin-directory")
 	for i := range deviceSpecs {
 		d := deviceSpecs[i]
+
+		enableUSBDiscovery := false
+		for _, g := range d.Groups {
+			if len(g.USBSpecs) > 0 {
+				enableUSBDiscovery = true
+				break
+			}
+		}
+
 		ctx, cancel := context.WithCancel(context.Background())
-		gp := deviceplugin.NewGenericPlugin(d, pluginPath, log.With(logger, "resource", d.Name), prometheus.WrapRegistererWith(prometheus.Labels{"resource": d.Name}, r))
+		gp := deviceplugin.NewGenericPlugin(d, pluginPath, log.With(logger, "resource", d.Name), prometheus.WrapRegistererWith(prometheus.Labels{"resource": d.Name}, r), enableUSBDiscovery)
 		// Start the generic device plugin server.
 		g.Add(func() error {
 			logger.Log("msg", fmt.Sprintf("Starting the generic-device-plugin for %q.", d.Name))
