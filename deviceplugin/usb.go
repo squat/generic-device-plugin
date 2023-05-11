@@ -243,7 +243,7 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 		var paths []string
 		usbDevs, err := enumerateUSBDevices(usbDevicesDir)
 		if err != nil {
-			level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %s", err.Error()))
+			level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %v", err))
 			return devices, nil
 		}
 		for _, dev := range group.USBSpecs {
