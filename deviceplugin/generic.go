@@ -95,10 +95,11 @@ type GenericPlugin struct {
 	// metrics
 	deviceGauge        prometheus.Gauge
 	allocationsCounter prometheus.Counter
+	enableUSBDiscovery bool
 }
 
 // NewGenericPlugin creates a new plugin for a generic device.
-func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg prometheus.Registerer) Plugin {
+func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg prometheus.Registerer, enableUSBDiscovery bool) Plugin {
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}
@@ -115,6 +116,7 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 			Name: "generic_device_plugin_allocations_total",
 			Help: "The total number of device allocations made by this device plugin.",
 		}),
+		enableUSBDiscovery: enableUSBDiscovery,
 	}
 
 	if reg != nil {
@@ -129,6 +131,11 @@ func (gp *GenericPlugin) discover() (devices []device, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover path devices: %w", err)
 	}
+
+	if !gp.enableUSBDiscovery {
+		return path, nil
+	}
+
 	usb, err := gp.discoverUSB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover usb devices: %w", err)

@@ -189,7 +189,7 @@ func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevic
 func enumerateUSBDevices(dir string) (specs []usbDevice, err error) {
 	allDevs, err := os.ReadDir(dir)
 	if err != nil {
-		return
+		return []usbDevice{}, err
 	}
 
 	// Set up a WaitGroup with a buffered channel for results
@@ -243,7 +243,8 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 		var paths []string
 		usbDevs, err := enumerateUSBDevices(usbDevicesDir)
 		if err != nil {
-			return devices, err
+			level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %v", err))
+			return devices, nil
 		}
 		for _, dev := range group.USBSpecs {
 			matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product)
