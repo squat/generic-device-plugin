@@ -28,6 +28,7 @@ import (
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
@@ -136,7 +137,7 @@ func (p *plugin) runOnce(ctx context.Context) error {
 		g.Add(func() error {
 			defer cancel()
 			level.Info(p.logger).Log("msg", "waiting for the gRPC server to be ready")
-			c, err := grpc.DialContext(ctx, p.socket, grpc.WithInsecure(), grpc.WithBlock(),
+			c, err := grpc.DialContext(ctx, p.socket, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
 				grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 					return (&net.Dialer{}).DialContext(ctx, "unix", addr)
 				}),
@@ -186,9 +187,10 @@ func (p *plugin) runOnce(ctx context.Context) error {
 
 func (p *plugin) registerWithKubelet() error {
 	level.Info(p.logger).Log("msg", "registering plugin with kubelet")
-	conn, err := grpc.Dial(filepath.Join(p.pluginDir, filepath.Base(v1beta1.KubeletSocket)), grpc.WithInsecure(),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-			return net.DialTimeout("unix", addr, timeout)
+	conn, err := grpc.Dial(filepath.Join(p.pluginDir, filepath.Base(v1beta1.KubeletSocket)), grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			d := &net.Dialer{}
+			return d.DialContext(ctx, "unix", addr)
 		}))
 	if err != nil {
 		return fmt.Errorf("failed to connect to kubelet: %v", err)
