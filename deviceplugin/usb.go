@@ -34,7 +34,7 @@ const (
 	usbDevicesDirProductIDFile = "idProduct"
 	usbDevicesDirBusFile       = "busnum"
 	usbDevicesDirBusDevFile    = "devnum"
-	usbDevBus                  = "/dev/bus/usb/%03d/%03d"
+	usbDevBus                  = "/dev/bus/usb/%03x/%03x"
 )
 
 // USBSpec represents a USB device specification that should be discovered.
