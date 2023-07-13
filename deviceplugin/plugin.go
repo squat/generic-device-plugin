@@ -105,6 +105,51 @@ Outer:
 	return p.cleanUp()
 }
 
+// serve starts the gRPC server and waits for it to be running
+// and accepting connections before returning. It returns a function
+// to wait for its completion as well as another to interrupt it.
+// This makes it convenient to run in a run.Group.
+func (p *plugin) serve(ctx context.Context) (func() error, func(error), error) {
+	// Run the gRPC server.
+	level.Info(p.logger).Log("msg", "listening on Unix socket", "socket", p.socket)
+	l, err := net.Listen("unix", p.socket)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to listen on Unix socket %q: %v", p.socket, err)
+	}
+
+	ch := make(chan error)
+	go func() {
+		level.Info(p.logger).Log("msg", "starting gRPC server")
+		ch <- p.grpcServer.Serve(l)
+	}()
+	t := time.NewTimer(1 * time.Second)
+	defer t.Stop()
+Outer:
+	for ctx.Err() == nil {
+		for range p.grpcServer.GetServiceInfo() {
+			break Outer
+		}
+		level.Info(p.logger).Log("msg", "waiting for gRPC server to be ready")
+		select {
+		case <-ctx.Done():
+			return nil, nil, ctx.Err()
+		case <-t.C:
+			t.Reset(1 * time.Second)
+		}
+	}
+	return func() error {
+			return <-ch
+		},
+		func(_ error) {
+			p.grpcServer.Stop()
+			close(ch)
+			if err := l.Close(); err != nil {
+
+				level.Warn(p.logger).Log("msg", "encountered error while closing the listener", "err", err)
+			}
+		}, nil
+}
+
 // runOnce runs the plugin one time until an error is encountered,
 // until the socket is removed, or until the context is cancelled.
 func (p *plugin) runOnce(ctx context.Context) error {
@@ -114,21 +159,11 @@ func (p *plugin) runOnce(ctx context.Context) error {
 	var g run.Group
 	{
 		// Run the gRPC server.
-		level.Info(p.logger).Log("msg", "listening on Unix socket", "socket", p.socket)
-		l, err := net.Listen("unix", p.socket)
+		execute, interrupt, err := p.serve(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to listen on Unix socket %q: %v", p.socket, err)
+			return fmt.Errorf("failed to start gRPC server: %v", err)
 		}
-
-		g.Add(func() error {
-			level.Info(p.logger).Log("msg", "starting gRPC server")
-			if err := p.grpcServer.Serve(l); err != nil {
-				return fmt.Errorf("gRPC server exited unexpectedly: %v", err)
-			}
-			return nil
-		}, func(error) {
-			p.grpcServer.Stop()
-		})
+		g.Add(execute, interrupt)
 	}
 
 	{
