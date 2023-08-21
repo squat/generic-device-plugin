@@ -14,10 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.2
     - name: Build
       run: make
 
@@ -25,10 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 1.20.2
     - name: Build for all Linux Architectures
       run: make all-build
 
@@ -51,17 +43,8 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: 1.20.2
-    - name: Enable Experimental Docker CLI
-      run: |
-        echo $'{\n  "experimental": true\n}' | sudo tee /etc/docker/daemon.json
-        mkdir -p ~/.docker
-        echo $'{\n  "experimental": "enabled"\n}' | sudo tee ~/.docker/config.json
-        sudo service docker restart
-        docker version -f '{{.Client.Experimental}}'
-        docker version -f '{{.Server.Experimental}}'
-        docker buildx version
     - name: Container
-      run: make container
+      run: CONTAINERIZE_BUILD=false make container
 
   test:
     runs-on: ubuntu-latest
@@ -73,7 +56,7 @@ jobs:
         go-version: 1.20.2
     - name: Build Container
       run: |
-        make container-latest
+        CONTAINERIZE_BUILD=false make container-latest
         docker tag squat/generic-device-plugin:amd64-latest squat/generic-device-plugin
     - name: Test Code
       run: make unit
@@ -93,15 +76,6 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: 1.20.2
-    - name: Enable Experimental Docker CLI
-      run: |
-        echo $'{\n  "experimental": true\n}' | sudo tee /etc/docker/daemon.json
-        mkdir -p ~/.docker
-        echo $'{\n  "experimental": "enabled"\n}' | sudo tee ~/.docker/config.json
-        sudo service docker restart
-        docker version -f '{{.Client.Experimental}}'
-        docker version -f '{{.Server.Experimental}}'
-        docker buildx version
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
       with:
@@ -119,12 +93,12 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build and push
       run: |
-        make manifest
+        CONTAINERIZE_BUILD=false make manifest
         make clean
-        REGISTRY=ghcr.io make manifest
+        CONTAINERIZE_BUILD=false REGISTRY=ghcr.io make manifest
     - name: Build and push latest
       if: github.ref == 'refs/heads/main'
       run: |
-        make manifest-latest
+        CONTAINERIZE_BUILD=false make manifest-latest
         make clean
-        REGISTRY=ghcr.io make manifest-latest
+        CONTAINERIZE_BUILD=false REGISTRY=ghcr.io make manifest-latest
