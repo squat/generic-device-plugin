@@ -234,9 +234,9 @@ func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID) (devs [
 }
 
 func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
+	usbDevs, err := enumerateUSBDevices(gp.fs, usbDevicesDir)
 	for _, group := range gp.ds.Groups {
 		var paths []string
-		usbDevs, err := enumerateUSBDevices(gp.fs, usbDevicesDir)
 		if err != nil {
 			level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %v", err))
 			return devices, nil

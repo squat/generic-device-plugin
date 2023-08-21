@@ -35,6 +35,7 @@ func TestDiscoverUSB(t *testing.T) {
 		{
 			name: "nil",
 			ds:   new(DeviceSpec),
+			fs:   fstest.MapFS{},
 		},
 		{
 			name: "simple",
