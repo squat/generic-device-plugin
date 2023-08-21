@@ -34,7 +34,7 @@ func kubectl(ctx context.Context, e e2e.Environment, extraArgs ...string) *exec.
 	return exec.CommandContext(ctx, "kubectl", append(args, extraArgs...)...)
 }
 
-func TestWebhook(t *testing.T) {
+func TestBasic(t *testing.T) {
 	t.Parallel()
 	e, err := e2e.NewKindEnvironment()
 	testutil.Ok(t, err)

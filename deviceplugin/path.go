@@ -17,7 +17,7 @@ package deviceplugin
 import (
 	"crypto/sha1"
 	"fmt"
-	"path/filepath"
+	"io/fs"
 	"sort"
 	"strconv"
 
@@ -72,7 +72,7 @@ func (gp *GenericPlugin) discoverPath() ([]device, error) {
 		var limitLength int
 		// Discover all the devices matching each pattern in the Paths group.
 		for i, path := range group.Paths {
-			matches, err := filepath.Glob(path.Path)
+			matches, err := fs.Glob(gp.fs, path.Path)
 			if err != nil {
 				return nil, err
 			}
