@@ -121,6 +121,7 @@ func (p *plugin) serve(ctx context.Context) (func() error, func(error), error) {
 	go func() {
 		level.Info(p.logger).Log("msg", "starting gRPC server")
 		ch <- p.grpcServer.Serve(l)
+		close(ch)
 	}()
 	t := time.NewTimer(1 * time.Second)
 	defer t.Stop()
@@ -142,7 +143,8 @@ Outer:
 		},
 		func(_ error) {
 			p.grpcServer.Stop()
-			close(ch)
+			// Drain the channel to clean up.
+			<-ch
 			if err := l.Close(); err != nil {
 
 				level.Warn(p.logger).Log("msg", "encountered error while closing the listener", "err", err)
