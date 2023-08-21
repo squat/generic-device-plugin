@@ -17,6 +17,8 @@ package deviceplugin
 import (
 	"context"
 	"fmt"
+	"io/fs"
+	"os"
 	"sync"
 	"time"
 
@@ -24,6 +26,8 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"github.com/squat/generic-device-plugin/absolute"
 )
 
 const (
@@ -87,15 +91,17 @@ type device struct {
 // * be found using either a file path or a USB identifier; and
 // * mounted and used without special logic.
 type GenericPlugin struct {
-	ds      *DeviceSpec
-	devices map[string]device
-	logger  log.Logger
-	mu      sync.Mutex
+	ds                 *DeviceSpec
+	devices            map[string]device
+	logger             log.Logger
+	enableUSBDiscovery bool
+	// Allows us to abstract away the file system for testing.
+	fs fs.FS
+	mu sync.Mutex
 
 	// metrics
 	deviceGauge        prometheus.Gauge
 	allocationsCounter prometheus.Counter
-	enableUSBDiscovery bool
 }
 
 // NewGenericPlugin creates a new plugin for a generic device.
@@ -105,9 +111,11 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 	}
 
 	gp := &GenericPlugin{
-		ds:      ds,
-		devices: make(map[string]device),
-		logger:  logger,
+		ds:                 ds,
+		devices:            make(map[string]device),
+		logger:             logger,
+		enableUSBDiscovery: enableUSBDiscovery,
+		fs:                 absolute.New(os.DirFS("/"), "/"),
 		deviceGauge: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "generic_device_plugin_devices",
 			Help: "The number of devices managed by this device plugin.",
@@ -116,7 +124,6 @@ func NewGenericPlugin(ds *DeviceSpec, pluginDir string, logger log.Logger, reg p
 			Name: "generic_device_plugin_allocations_total",
 			Help: "The total number of device allocations made by this device plugin.",
 		}),
-		enableUSBDiscovery: enableUSBDiscovery,
 	}
 
 	if reg != nil {

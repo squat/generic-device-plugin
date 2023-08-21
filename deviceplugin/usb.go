@@ -17,7 +17,7 @@ package deviceplugin
 import (
 	"crypto/sha1"
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -108,8 +108,8 @@ func (dev *usbDevice) BusPath() (path string) {
 // readFileToUint16 reads the file at the given path, then returns a representation of that file as uint16.
 // Ignores newlines.
 // Returns an error if the file could not be read, or parsed as uint16.
-func readFileToUint16(path string) (out uint16, err error) {
-	bytes, err := os.ReadFile(path)
+func readFileToUint16(fsys fs.FS, path string) (out uint16, err error) {
+	bytes, err := fs.ReadFile(fsys, path)
 	if err != nil {
 		// We can't read this file for some reason
 		return out, err
@@ -126,51 +126,46 @@ func readFileToUint16(path string) (out uint16, err error) {
 	return uint16(dAsInt), nil
 }
 
-func resolveSymlinkToDir(path string) (absolutePath string, err error) {
-	absolutePath, err = filepath.EvalSymlinks(path)
+func resolveSymlinkToDir(fsys fs.FS, path string) (absolutePath string, err error) {
+	fileInfo, err := fs.Stat(fsys, path)
 	if err != nil {
-		return absolutePath, err
+		return "", err
 	}
-	pathEntry, err := os.Stat(absolutePath)
-	if err != nil {
-		return absolutePath, err
+	if !fileInfo.IsDir() {
+		return "", fmt.Errorf("not a directory")
 	}
-	if !pathEntry.IsDir() {
-		return absolutePath, fmt.Errorf("not a directory")
-	}
-	return absolutePath, nil
+	return path, nil
 }
 
 // queryUSBDeviceCharacteristicsByDirectory scans the given directory for information regarding the given USB device,
 // then returns a pointer to a new usbDevice if information is found.
 // Safe to presume that result is set if err is nil.
-func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevice, err error) {
-	fqPath := filepath.Join(usbDevicesDir, dir.Name())
+func queryUSBDeviceCharacteristicsByDirectory(fsys fs.FS, path string) (result *usbDevice, err error) {
 	// Test if symlink needs to be followed.
-	fqPath, err = resolveSymlinkToDir(fqPath)
+	path, err = resolveSymlinkToDir(fsys, path)
 
 	if err != nil {
 		return result, err
 	}
 
 	// Try to find the vendor ID file inside this device - this is a good indication that we're dealing with a device, not a bus.
-	vnd, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirVendorIDFile))
+	vnd, err := readFileToUint16(fsys, filepath.Join(path, usbDevicesDirVendorIDFile))
 	if err != nil {
 		// We can't read the vendor file for some reason, it probably doesn't exist.
 		return result, err
 	}
 
-	prd, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirProductIDFile))
+	prd, err := readFileToUint16(fsys, filepath.Join(path, usbDevicesDirProductIDFile))
 	if err != nil {
 		return result, err
 	}
 
 	// The following two calls shouldn't fail if the above two exist and are readable.
-	bus, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirBusFile))
+	bus, err := readFileToUint16(fsys, filepath.Join(path, usbDevicesDirBusFile))
 	if err != nil {
 		return result, err
 	}
-	busLoc, err := readFileToUint16(filepath.Join(fqPath, usbDevicesDirBusDevFile))
+	busLoc, err := readFileToUint16(fsys, filepath.Join(path, usbDevicesDirBusDevFile))
 	if err != nil {
 		return result, err
 	}
@@ -186,8 +181,8 @@ func queryUSBDeviceCharacteristicsByDirectory(dir os.DirEntry) (result *usbDevic
 
 // enumerateUSBDevices rapidly scans the OS system bus for attached USB devices.
 // Pure Go; does not require external linking.
-func enumerateUSBDevices(dir string) (specs []usbDevice, err error) {
-	allDevs, err := os.ReadDir(dir)
+func enumerateUSBDevices(fsys fs.FS, dir string) (specs []usbDevice, err error) {
+	allDevs, err := fs.ReadDir(fsys, dir)
 	if err != nil {
 		return []usbDevice{}, err
 	}
@@ -205,7 +200,7 @@ func enumerateUSBDevices(dir string) (specs []usbDevice, err error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := queryUSBDeviceCharacteristicsByDirectory(dev)
+			result, err := queryUSBDeviceCharacteristicsByDirectory(fsys, filepath.Join(dir, dev.Name()))
 			if err != nil {
 				// do we want to handle errors here?
 				return
@@ -241,7 +236,7 @@ func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID) (devs [
 func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 	for _, group := range gp.ds.Groups {
 		var paths []string
-		usbDevs, err := enumerateUSBDevices(usbDevicesDir)
+		usbDevs, err := enumerateUSBDevices(gp.fs, usbDevicesDir)
 		if err != nil {
 			level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %v", err))
 			return devices, nil
@@ -251,13 +246,12 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 			if err != nil {
 				return nil, err
 			}
-			if len(matches) > 0 {
-				for _, match := range matches {
-					level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
-					paths = append(paths, match.BusPath())
-				}
-			} else {
+			if len(matches) == 0 {
 				level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
+			}
+			for _, match := range matches {
+				level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
+				paths = append(paths, match.BusPath())
 			}
 		}
 		if len(paths) > 0 {
