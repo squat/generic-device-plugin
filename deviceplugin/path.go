@@ -81,7 +81,7 @@ func (gp *GenericPlugin) discoverPath() ([]device, error) {
 				paths[i] = append(paths[i], matches...)
 			}
 			// Keep track of the shortest reusable length in the group.
-			if limitLength == 0 || len(paths[i]) < limitLength {
+			if i == 0 || len(paths[i]) < limitLength {
 				limitLength = len(paths[i])
 			}
 			// Keep track of the greatest natural length in the group.
