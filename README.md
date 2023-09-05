@@ -21,7 +21,7 @@ Now, Pods that require a video capture device, such as an object detection servi
 ```yaml
 resources:
   limits:
-    squat.ai/video: 5
+    squat.ai/video: 1
 ```
 
 The `--device` flag can be provided multiple times to allow the plugin to discover and allocate different types of resources.
