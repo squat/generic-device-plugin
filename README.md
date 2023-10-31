@@ -14,7 +14,7 @@ This allows devices that don't require special drivers to be advertised to the c
 The generic-device-plugin can be configured to discover and allocate any desired device using the `--device` flag.
 For example, to advertise all video devices to the cluster, the following flag could be given:
 ```
---device {"name": "video", "groups": [{"paths": [{"path": "/dev/video0"}]}]}
+--device='{"name": "video", "groups": [{"paths": [{"path": "/dev/video0"}]}]}'
 ```
 
 Now, Pods that require a video capture device, such as an object detection service, could request to be allocated one using the Kubernetes Pod `resources` field:
