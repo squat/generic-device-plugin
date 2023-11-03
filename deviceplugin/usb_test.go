@@ -57,6 +57,7 @@ func TestDiscoverUSB(t *testing.T) {
 				"sys/bus/usb/devices/3-4/idProduct": {Data: []byte("0407\n")},
 				"sys/bus/usb/devices/3-4/busnum":    {Data: []byte("3\n")},
 				"sys/bus/usb/devices/3-4/devnum":    {Data: []byte("22\n")},
+				"sys/bus/usb/devices/3-4/serial":    {Data: []byte("51\n")},
 			},
 			out: []device{
 				{
@@ -64,6 +65,46 @@ func TestDiscoverUSB(t *testing.T) {
 						{
 							ContainerPath: "/dev/bus/usb/003/022",
 							HostPath:      "/dev/bus/usb/003/022",
+						},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "serial",
+			ds: &DeviceSpec{
+				Name: "serial",
+				Groups: []*Group{
+					{
+						USBSpecs: []*USBSpec{
+							{
+								Vendor:  0x1050,
+								Product: 0x0407,
+								Serial:  "52",
+							},
+						},
+					},
+				},
+			},
+			fs: fstest.MapFS{
+				"sys/bus/usb/devices/3-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/3-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/3-4/busnum":    {Data: []byte("3\n")},
+				"sys/bus/usb/devices/3-4/devnum":    {Data: []byte("22\n")},
+				"sys/bus/usb/devices/3-4/serial":    {Data: []byte("51\n")},
+				"sys/bus/usb/devices/4-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/4-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/4-4/busnum":    {Data: []byte("4\n")},
+				"sys/bus/usb/devices/4-4/devnum":    {Data: []byte("25\n")},
+				"sys/bus/usb/devices/4-4/serial":    {Data: []byte("52\n")},
+			},
+			out: []device{
+				{
+					deviceSpecs: []*v1beta1.DeviceSpec{
+						{
+							ContainerPath: "/dev/bus/usb/004/025",
+							HostPath:      "/dev/bus/usb/004/025",
 						},
 					},
 				},

@@ -32,6 +32,7 @@ const (
 	usbDevicesDir              = "/sys/bus/usb/devices/"
 	usbDevicesDirVendorIDFile  = "idVendor"
 	usbDevicesDirProductIDFile = "idProduct"
+	usbDevicesDirSerialFile    = "serial"
 	usbDevicesDirBusFile       = "busnum"
 	usbDevicesDirBusDevFile    = "devnum"
 	usbDevBus                  = "/dev/bus/usb/%03x/%03x"
@@ -45,6 +46,8 @@ type USBSpec struct {
 	Vendor USBID `json:"vendor"`
 	// Product is the USB Product ID of the device to match on.
 	Product USBID `json:"product"`
+	// Serial is the serial number of the device to match on.
+	Serial string `json:"serial"`
 }
 
 // USBID is a representation of a platform or vendor ID under the USB standard (see gousb.ID)
@@ -98,6 +101,8 @@ type usbDevice struct {
 	Bus uint16 `json:"bus"`
 	// BusDevice is the location of the device on the Bus.
 	BusDevice uint16 `json:"busdev"`
+	// Serial is the serial number of the device.
+	Serial string `json:"serial"`
 }
 
 // BusPath returns the platform-correct path to the raw device.
@@ -160,6 +165,12 @@ func queryUSBDeviceCharacteristicsByDirectory(fsys fs.FS, path string) (result *
 		return result, err
 	}
 
+	serBytes, err := fs.ReadFile(fsys, filepath.Join(path, usbDevicesDirSerialFile))
+	if err != nil {
+		return result, err
+	}
+	ser := strings.TrimSuffix(string(serBytes), "\n")
+
 	// The following two calls shouldn't fail if the above two exist and are readable.
 	bus, err := readFileToUint16(fsys, filepath.Join(path, usbDevicesDirBusFile))
 	if err != nil {
@@ -175,6 +186,7 @@ func queryUSBDeviceCharacteristicsByDirectory(fsys fs.FS, path string) (result *
 		Product:   USBID(prd),
 		Bus:       bus,
 		BusDevice: busLoc,
+		Serial:    ser,
 	}
 	return &res, nil
 }
@@ -224,9 +236,9 @@ func enumerateUSBDevices(fsys fs.FS, dir string) (specs []usbDevice, err error) 
 }
 
 // searchUSBDevices returns a subset of the "devices" slice containing only those usbDevices that match the given vendor and product arguments.
-func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID) (devs []usbDevice, err error) {
+func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID, serial string) (devs []usbDevice, err error) {
 	for _, dev := range *devices {
-		if dev.Vendor == vendor && dev.Product == product {
+		if dev.Vendor == vendor && dev.Product == product && (serial == "" || dev.Serial == serial) {
 			devs = append(devs, dev)
 		}
 	}
@@ -242,7 +254,7 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 			return devices, nil
 		}
 		for _, dev := range group.USBSpecs {
-			matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product)
+			matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product, dev.Serial)
 			if err != nil {
 				return nil, err
 			}
