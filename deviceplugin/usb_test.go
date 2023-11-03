@@ -45,8 +45,8 @@ func TestDiscoverUSB(t *testing.T) {
 					{
 						USBSpecs: []*USBSpec{
 							{
-								Vendor:  4176,
-								Product: 1031,
+								Vendor:  0x1050,
+								Product: 0x0407,
 							},
 						},
 					},
