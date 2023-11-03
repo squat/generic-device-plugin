@@ -39,7 +39,7 @@ Should be provided in the form:
 {"name": "<name>", "groups": [(device definitions)], "count": <count>}]}
 The device definition can be either a path to a device file or a USB device. You cannot define both in the same group.
 For device files, use something like: {"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}]}
-For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}]}
+For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}, {"vendor": "1209", "product": "000F", "serial": "00000001"}]}
 For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
 The device flag can specify lists of devices that should be grouped and mounted into a container together as one single meta-device.
 For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}
