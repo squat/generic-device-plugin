@@ -16,6 +16,7 @@ package deviceplugin
 
 import (
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -165,11 +166,14 @@ func queryUSBDeviceCharacteristicsByDirectory(fsys fs.FS, path string) (result *
 		return result, err
 	}
 
+	serial := ""
 	serBytes, err := fs.ReadFile(fsys, filepath.Join(path, usbDevicesDirSerialFile))
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return result, err
 	}
-	ser := strings.TrimSuffix(string(serBytes), "\n")
+	if serBytes != nil {
+		serial = strings.TrimSuffix(string(serBytes), "\n")
+	}
 
 	// The following two calls shouldn't fail if the above two exist and are readable.
 	bus, err := readFileToUint16(fsys, filepath.Join(path, usbDevicesDirBusFile))
@@ -186,7 +190,7 @@ func queryUSBDeviceCharacteristicsByDirectory(fsys fs.FS, path string) (result *
 		Product:   USBID(prd),
 		Bus:       bus,
 		BusDevice: busLoc,
-		Serial:    ser,
+		Serial:    serial,
 	}
 	return &res, nil
 }
