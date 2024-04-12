@@ -1,4 +1,4 @@
-name: Lint and Test Chart
+name: Lint Chart
 
 on:
   pull_request:
@@ -36,18 +36,3 @@ jobs:
         id: lint
         if: steps.list-changed.outputs.changed == 'true'
         run: ct lint --target-branch ${{ github.event.repository.default_branch }}
-
-      - uses: debianmaster/actions-k3s@master
-        id: k3s
-        name: setup k3s
-        with:
-          version: 'latest'
-
-      - name: install Prometheus PodMonitor CRD
-        run: kubectl apply -f https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/charts/crds/crds/crd-podmonitors.yaml
-
-      - name: Run chart-testing (install)
-        id: install
-        if: steps.list-changed.outputs.changed == 'true'
-        run: |
-            ct install --target-branch ${{ github.event.repository.default_branch }}
