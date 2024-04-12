@@ -2,7 +2,24 @@
 
 ![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0](https://img.shields.io/badge/AppVersion-0.1.0-informational?style=flat-square)
 
-A Helm chart for deploying the generic-device-plugin on Kubernetes
+A Helm chart for deploying the generic-device-plugin on Kubernetes.
+
+## Tips
+
+Ensure that this is deployed into the `kube-system` namespace.
+
+### Installing directly from the git repo
+
+```bash
+# clone the repo
+git clone https://github.com/squat/generic-device-plugin
+
+# change to the chart directory
+cd charts/generic-device-plugin
+
+# install the helm chart in the kube-system namespace
+helm install -n kube-system generic-device-plugin .
+```
 
 ## Maintainers
 
