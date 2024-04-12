@@ -93,7 +93,7 @@ spec:
                   - path: /dev/snd/pcmC3D0c
                     mountPath: /dev/snd/pcmC0D0c
           resources:
-            {{- toYaml .Values.resources | nindent 10 }}
+            {{- toYaml .Values.resources | nindent 12 }}
           ports:
             - containerPort: 8080
               name: http
