@@ -1,0 +1,48 @@
+# Default values for generic-device-plugin.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  # -- container image repo
+  repository: squat/generic-device-plugin
+  # -- image pullPolicy is set to always because tag is set to latest
+  pullPolicy: Always
+  # -- Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+# -- override the name of the chart resources
+nameOverride: ""
+# -- override the fullname of the chart resources
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# -- additional annotations for the generic-device-plugin pod
+podAnnotations: {}
+# -- additional labels for the generic-device-plugin pod
+podLabels: {}
+
+# -- resource requests and limits for the generic-device-plugin pod
+resources:
+  requests:
+    cpu: 50m
+    memory: 10Mi
+  limits:
+    cpu: 50m
+    memory: 20Mi
+
+# -- tolerations of kubernetes taints
+tolerations:
+  - operator: "Exists"
+    effect: "NoExecute"
+  - operator: "Exists"
+    effect: "NoSchedule"
