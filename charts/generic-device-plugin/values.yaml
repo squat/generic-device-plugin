@@ -46,3 +46,6 @@ tolerations:
     effect: "NoExecute"
   - operator: "Exists"
     effect: "NoSchedule"
+
+# -- deploy the podMonitor (requires PodMonitor CRD to be installed)
+deployPodMonitor: true

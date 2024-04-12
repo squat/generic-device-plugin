@@ -43,6 +43,9 @@ jobs:
         with:
           version: 'latest'
 
+      - name: install Prometheus PodMonitor CRD
+        run: kubectl apply -f https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/charts/crds/crds/crd-podmonitors.yaml
+
       - name: Run chart-testing (install)
         id: install
         if: steps.list-changed.outputs.changed == 'true'

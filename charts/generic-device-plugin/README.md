@@ -4,10 +4,17 @@
 
 A Helm chart for deploying the generic-device-plugin on Kubernetes
 
+## Maintainers
+
+| Name | Email | Url |
+| ---- | ------ | --- |
+| squat |  | <https://github.com/squat> |
+
 ## Values
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| deployPodMonitor | bool | `true` | deploy the podMonitor (requires PodMonitor CRD to be installed) |
 | fullnameOverride | string | `""` | override the fullname of the chart resources |
 | image.pullPolicy | string | `"Always"` | image pullPolicy is set to always because tag is set to latest |
 | image.repository | string | `"squat/generic-device-plugin"` | container image repo |
