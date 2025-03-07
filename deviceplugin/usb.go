@@ -251,6 +251,10 @@ func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID, serial 
 
 func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 	usbDevs, err := enumerateUSBDevices(gp.fs, usbDevicesDir)
+	for _, usbDev := range usbDevs {
+		level.Debug(gp.logger).Log("msg", "discovered USB device", "usbdevice", fmt.Sprintf("%v:%v", usbDev.Vendor.String(), usbDev.Product.String()), "path", usbDev.BusPath())
+	}
+
 	for _, group := range gp.ds.Groups {
 		var paths []string
 		if err != nil {
