@@ -25,10 +25,7 @@ SRC := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 GO_FILES ?= $$(find . -name '*.go' -not -path './vendor/*')
 GO_PKGS ?= $$(go list ./... | grep -v "$(PKG)/vendor")
 
-STATICCHECK_BINARY := bin/staticcheck
-EMBEDMD_BINARY := bin/embedmd
-
-BUILD_IMAGE ?= golang:1.19.7-alpine
+BUILD_IMAGE ?= golang:1.24.6-alpine
 
 build: $(BINS)
 
@@ -88,7 +85,7 @@ fmt:
 	@echo $(GO_PKGS)
 	gofmt -w -s $(GO_FILES)
 
-lint: header $(STATICCHECK_BINARY)
+lint: header
 	@echo 'go vet $(GO_PKGS)'
 	@vet_res=$$(GO111MODULE=on go vet $(GO_PKGS) 2>&1); if [ -n "$$vet_res" ]; then \
 		echo ""; \
@@ -97,8 +94,8 @@ lint: header $(STATICCHECK_BINARY)
 		echo "$$vet_res"; \
 		exit 1; \
 	fi
-	@echo '$(STATICCHECK_BINARY) $(GO_PKGS)'
-	@lint_res=$$($(STATICCHECK_BINARY) $(GO_PKGS)); if [ -n "$$lint_res" ]; then \
+	@echo 'go tool staticcheck $(GO_PKGS)'
+	@lint_res=$$(go tool staticcheck $(GO_PKGS)); if [ -n "$$lint_res" ]; then \
 		echo ""; \
 		echo "Staticcheck found style issues. Please check the reported issues"; \
 		echo "and fix them if necessary before submitting the code for review:"; \
@@ -217,11 +214,5 @@ tmp/help.txt: bin/$(ARCH)/generic-device-plugin
 	mkdir -p tmp
 	bin/$(ARCH)/generic-device-plugin --help 2>&1 | head -n -1 > $@
 
-README.md: $(EMBEDMD_BINARY) tmp/help.txt
-	$(EMBEDMD_BINARY) -w $@
-
-$(STATICCHECK_BINARY):
-	go build -o $@ honnef.co/go/tools/cmd/staticcheck
-
-$(EMBEDMD_BINARY):
-	go build -o $@ github.com/campoy/embedmd
+README.md: tmp/help.txt
+	go tool embedmd -w $@
