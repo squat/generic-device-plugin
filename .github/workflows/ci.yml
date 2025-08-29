@@ -31,7 +31,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.20.2
+        go-version: 1.24
     - name: Lint Code
       run: make vendor lint
 
@@ -42,7 +42,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.20.2
+        go-version: 1.24
     - name: Container
       run: CONTAINERIZE_BUILD=false make container
 
@@ -53,7 +53,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.20.2
+        go-version: 1.24
     - name: Build Container
       run: |
         CONTAINERIZE_BUILD=false make container-latest
@@ -75,7 +75,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.20.2
+        go-version: 1.24
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
       with:
