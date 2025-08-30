@@ -19,7 +19,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	"github.com/squat/generic-device-plugin/absolute"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
