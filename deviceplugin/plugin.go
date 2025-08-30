@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
@@ -174,6 +174,7 @@ func (p *plugin) runOnce(ctx context.Context) error {
 		g.Add(func() error {
 			defer cancel()
 			level.Info(p.logger).Log("msg", "waiting for the gRPC server to be ready")
+			//lint:ignore SA1019 keep using deprecated gRPC functions for now
 			c, err := grpc.DialContext(ctx, p.socket, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
 				grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 					return (&net.Dialer{}).DialContext(ctx, "unix", addr)
@@ -224,6 +225,7 @@ func (p *plugin) runOnce(ctx context.Context) error {
 
 func (p *plugin) registerWithKubelet() error {
 	level.Info(p.logger).Log("msg", "registering plugin with kubelet")
+	//lint:ignore SA1019 keep using deprecated gRPC functions for now
 	conn, err := grpc.Dial(filepath.Join(p.pluginDir, filepath.Base(v1beta1.KubeletSocket)), grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
