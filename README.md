@@ -8,6 +8,7 @@ This allows devices that don't require special drivers to be advertised to the c
 
 [![Build Status](https://github.com/squat/generic-device-plugin/workflows/CI/badge.svg)](https://github.com/squat/generic-device-plugin/actions?query=workflow%3ACI)
 [![Go Report Card](https://goreportcard.com/badge/github.com/squat/generic-device-plugin)](https://goreportcard.com/report/github.com/squat/generic-device-plugin)
+[![Built with Nix](https://img.shields.io/static/v1?logo=nixos&logoColor=white&label=&message=Built%20with%20Nix&color=41439a)](https://builtwithnix.org)
 
 ## Overview
 
@@ -75,9 +76,9 @@ Now, the MJPEG stream could be opened by pointing a browser to [http://localhost
 
 ## Usage
 
-[embedmd]:# (tmp/help.txt)
+[embedmd]:# (help.txt)
 ```txt
-Usage of bin/amd64/generic-device-plugin:
+Usage of generic-device-plugin:
       --config string             Path to the config file.
       --device stringArray        The devices to expose. This flag can be repeated to specify multiple device types.
                                   Multiple paths can be given for each type. Paths can be globs.
@@ -85,7 +86,7 @@ Usage of bin/amd64/generic-device-plugin:
                                   {"name": "<name>", "groups": [(device definitions)], "count": <count>}]}
                                   The device definition can be either a path to a device file or a USB device. You cannot define both in the same group.
                                   For device files, use something like: {"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}]}
-                                  For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}]}
+                                  For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}, {"vendor": "1209", "product": "000F", "serial": "00000001"}]}
                                   For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
                                   The device flag can specify lists of devices that should be grouped and mounted into a container together as one single meta-device.
                                   For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}

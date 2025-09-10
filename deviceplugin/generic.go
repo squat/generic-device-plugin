@@ -230,7 +230,7 @@ func (gp *GenericPlugin) GetDevicePluginOptions(_ context.Context, _ *v1beta1.Em
 
 // ListAndWatch lists all devices and then refreshes every deviceCheckInterval.
 func (gp *GenericPlugin) ListAndWatch(_ *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
-	level.Info(gp.logger).Log("msg", "starting listwatch")
+	_ = level.Info(gp.logger).Log("msg", "starting listwatch")
 	if _, err := gp.refreshDevices(); err != nil {
 		return err
 	}

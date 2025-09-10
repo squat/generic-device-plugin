@@ -34,12 +34,12 @@ func kubectl(ctx context.Context, e e2e.Environment, extraArgs ...string) *exec.
 	return exec.CommandContext(ctx, "kubectl", append(args, extraArgs...)...)
 }
 
-func TestBasic(t *testing.T) {
+func TestE2EBasic(t *testing.T) {
 	t.Parallel()
 	e, err := e2e.NewKindEnvironment()
 	testutil.Ok(t, err)
 	t.Cleanup(e.Close)
-	out, err := kind(context.Background(), e, "load", "docker-image", "squat/generic-device-plugin").CombinedOutput()
+	out, err := kind(context.Background(), e, "load", "docker-image", "docker.io/squat/generic-device-plugin").CombinedOutput()
 	testutil.Ok(t, err, string(out))
 	a := e.Runnable("fuse").Init(e2e.StartOptions{
 		Image: "alpine",

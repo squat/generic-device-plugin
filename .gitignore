@@ -1,7 +1,5 @@
-.cache/
-.container*
-.manifest*
-.push*
-bin/
-tmp/
-vendor/
+.direnv/
+/.pre-commit-config.yaml
+/result*
+/e2e-*/
+/help.txt

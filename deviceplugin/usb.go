@@ -252,13 +252,13 @@ func searchUSBDevices(devices *[]usbDevice, vendor USBID, product USBID, serial 
 func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 	usbDevs, err := enumerateUSBDevices(gp.fs, usbDevicesDir)
 	for _, usbDev := range usbDevs {
-		level.Debug(gp.logger).Log("msg", "discovered USB device", "usbdevice", fmt.Sprintf("%v:%v", usbDev.Vendor.String(), usbDev.Product.String()), "path", usbDev.BusPath())
+		_ = level.Debug(gp.logger).Log("msg", "discovered USB device", "usbdevice", fmt.Sprintf("%v:%v", usbDev.Vendor.String(), usbDev.Product.String()), "path", usbDev.BusPath())
 	}
 
 	for _, group := range gp.ds.Groups {
 		var paths []string
 		if err != nil {
-			level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %v", err))
+			_ = level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %v", err))
 			return devices, nil
 		}
 		for _, dev := range group.USBSpecs {
@@ -267,10 +267,10 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 				return nil, err
 			}
 			if len(matches) == 0 {
-				level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
+				_ = level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
 			}
 			for _, match := range matches {
-				level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
+				_ = level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
 				paths = append(paths, match.BusPath())
 			}
 		}
