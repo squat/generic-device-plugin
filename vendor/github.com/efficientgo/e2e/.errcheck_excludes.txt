@@ -1,0 +1,5 @@
+(github.com/go-kit/kit/log.Logger).Log
+(github.com/efficientgo/e2e.Logger).Log
+(*github.com/efficientgo/e2e.SimpleLogger).Log
+fmt.Fprintln
+fmt.Fprint
