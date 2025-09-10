@@ -112,7 +112,7 @@
                       readmeCheck = pkgs.writeShellApplication {
                         name = "readme-check";
                         text = ''
-                          (go run ./... --help 2>&1 1>/dev/null || [ $? -eq 1 ]) | head --lines=-1 | sed 's/\(Usage of\).*\(generic-device-plugin:\)/\1 \2/' > help.txt
+                          (go run ./... --help 2>&1 1>/dev/null || [ $? -eq 1 ]) | sed 's/\(Usage of\).*\(generic-device-plugin:\)/\1 \2/' > help.txt
                           go tool embedmd -d README.md
                         '';
                       };
