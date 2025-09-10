@@ -22,10 +22,11 @@ import (
 	"strconv"
 	"strings"
 
-	dto "github.com/prometheus/client_model/go"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/prometheus/common/model"
+
+	dto "github.com/prometheus/client_model/go"
 )
 
 type encoderOption struct {
@@ -248,7 +249,7 @@ func MetricFamilyToOpenMetrics(out io.Writer, in *dto.MetricFamily, options ...E
 
 	// Finally the samples, one line for each.
 	if metricType == dto.MetricType_COUNTER && strings.HasSuffix(name, "_total") {
-		compliantName += "_total"
+		compliantName = compliantName + "_total"
 	}
 	for _, metric := range in.Metric {
 		switch metricType {
@@ -476,7 +477,7 @@ func writeOpenMetricsNameAndLabelPairs(
 	if name != "" {
 		// If the name does not pass the legacy validity check, we must put the
 		// metric name inside the braces, quoted.
-		if !model.LegacyValidation.IsValidMetricName(name) {
+		if !model.IsValidLegacyMetricName(name) {
 			metricInsideBraces = true
 			err := w.WriteByte(separator)
 			written++
@@ -640,11 +641,11 @@ func writeExemplar(w enhancedWriter, e *dto.Exemplar) (int, error) {
 		if err != nil {
 			return written, err
 		}
-		err = e.Timestamp.CheckValid()
+		err = (*e).Timestamp.CheckValid()
 		if err != nil {
 			return written, err
 		}
-		ts := e.Timestamp.AsTime()
+		ts := (*e).Timestamp.AsTime()
 		// TODO(beorn7): Format this directly from components of ts to
 		// avoid overflow/underflow and precision issues of the float
 		// conversion.
