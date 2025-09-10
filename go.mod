@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/client_golang v1.23.0
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
-	google.golang.org/grpc v1.75.0
+	google.golang.org/grpc v1.75.1
 	k8s.io/apimachinery v0.34.1
 	k8s.io/kubelet v0.34.0
 )
