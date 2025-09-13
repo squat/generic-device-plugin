@@ -39,7 +39,7 @@ func TestE2EBasic(t *testing.T) {
 	e, err := e2e.NewKindEnvironment()
 	testutil.Ok(t, err)
 	t.Cleanup(e.Close)
-	out, err := kind(context.Background(), e, "load", "docker-image", "docker.io/squat/generic-device-plugin").CombinedOutput()
+	out, err := kind(context.Background(), e, "load", "docker-image", "generic-device-plugin:test").CombinedOutput()
 	testutil.Ok(t, err, string(out))
 	a := e.Runnable("fuse").Init(e2e.StartOptions{
 		Image: "alpine",
@@ -50,6 +50,8 @@ func TestE2EBasic(t *testing.T) {
 	})
 	testutil.Ok(t, a.Start())
 	out, err = kubectl(context.Background(), e, "apply", "--filename", "manifests/generic-device-plugin.yaml").CombinedOutput()
+	testutil.Ok(t, err, string(out))
+	out, err = kubectl(context.Background(), e, "patch", "daemonset", "generic-device-plugin", "--namespace", "kube-system", "--patch", `{"spec": {"template": {"spec": {"containers": [{"name": "generic-device-plugin", "image": "generic-device-plugin:test", "imagePullPolicy": "Never"}]}}}}`).CombinedOutput()
 	testutil.Ok(t, err, string(out))
 	out, err = kubectl(context.Background(), e, "rollout", "status", "daemonset", "generic-device-plugin", "--namespace", "kube-system").CombinedOutput()
 	testutil.Ok(t, err, string(out))
