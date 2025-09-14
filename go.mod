@@ -12,7 +12,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oklog/run v1.2.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.20.1
 	google.golang.org/grpc v1.75.1
 	k8s.io/apimachinery v0.34.1
