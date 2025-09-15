@@ -1,17 +1,23 @@
-FROM docker.io/nixos/nix:2.31.1 AS builder
+FROM --platform=$BUILDPLATFORM docker.io/nixos/nix:2.31.1 AS builder
+
 COPY . /tmp/build
 WORKDIR /tmp/build
+
+ARG BUILDOS
+ARG BUILDARCH
+ARG TARGETOS
+ARG TARGETARCH
+
 RUN nix \
     --extra-experimental-features "nix-command flakes" \
     --option filter-syscalls false \
-    build
-RUN mkdir /tmp/nix-store-closure
-RUN cp -R $(nix-store -qR result/) /tmp/nix-store-closure
-
+    build ".#generic-device-plugin-cross-$TARGETOS-$TARGETARCH"
+RUN ln -s ../bin result/bin/"$BUILDOS"_"$BUILDARCH"
 FROM scratch
 
-WORKDIR /build
+ARG TARGETOS
+ARG TARGETARCH
 
-COPY --from=builder /tmp/nix-store-closure /nix/store
-COPY --from=builder /tmp/build/result /build
-ENTRYPOINT ["/build/bin/generic-device-plugin"]
+COPY --from=builder /tmp/build/result/bin/"$TARGETOS"_"$TARGETARCH"/generic-device-plugin /generic-device-plugin
+
+ENTRYPOINT ["/generic-device-plugin"]
