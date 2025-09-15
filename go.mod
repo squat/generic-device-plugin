@@ -16,7 +16,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	google.golang.org/grpc v1.75.1
 	k8s.io/apimachinery v0.34.1
-	k8s.io/kubelet v0.34.0
+	k8s.io/kubelet v0.34.1
 )
 
 require (
