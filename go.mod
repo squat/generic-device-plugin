@@ -8,7 +8,7 @@ require (
 	github.com/efficientgo/core v1.0.0-rc.3
 	github.com/efficientgo/e2e v0.14.1-0.20230329073854-29a5a4d5575a
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-kit/log v0.2.0
+	github.com/go-kit/log v0.2.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oklog/run v1.2.0
 	github.com/prometheus/client_golang v1.23.2
