@@ -48,6 +48,27 @@
               };
             };
 
+            generic-device-plugin-cross-linux-amd64 = generic-device-plugin.overrideAttrs {
+              env.GOOS = "linux";
+              env.GOARCH = "amd64";
+              env.CGO_ENABLED = 0;
+              checkPhase = false;
+            };
+
+            generic-device-plugin-cross-linux-arm = generic-device-plugin.overrideAttrs {
+              env.GOOS = "linux";
+              env.GOARCH = "arm";
+              env.CGO_ENABLED = 0;
+              checkPhase = false;
+            };
+
+            generic-device-plugin-cross-linux-arm64 = generic-device-plugin.overrideAttrs {
+              env.GOOS = "linux";
+              env.GOARCH = "arm64";
+              env.CGO_ENABLED = 0;
+              checkPhase = false;
+            };
+
             default = generic-device-plugin;
           };
 
