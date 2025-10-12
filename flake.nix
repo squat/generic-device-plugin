@@ -104,12 +104,6 @@
                       headerCheck = pkgs.writeShellApplication {
                         name = "header-check";
                         text = ''
-                          log() { 
-                            local ln="$LINENO" bc="$BASH_COMMAND" ec="$?"
-                            printf "encountered error while executing '%s' on line %d\n" "$bc" "$ln"
-                            exit "$ec"
-                          }
-                          trap log ERR
                           HEADER=$(cat ${./.header})
                           HEADER_LEN=$(wc -l ${./.header} | awk '{print $1}')
                           FILES=
