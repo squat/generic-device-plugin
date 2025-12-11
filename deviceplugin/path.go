@@ -18,8 +18,10 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
@@ -106,6 +108,9 @@ func (gp *GenericPlugin) discoverPath() ([]device, error) {
 					mountPath = path.MountPath
 					if mountPath == "" {
 						mountPath = paths[k][i]
+					}
+					if strings.HasSuffix(mountPath, "/") {
+						mountPath = mountPath + filepath.Base(paths[k][i])
 					}
 					switch path.Type {
 					case DevicePathType:
