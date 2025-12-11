@@ -48,8 +48,7 @@ A "count" can be specified to allow a discovered device group to be scheduled mu
 For example, to permit allocation of the FUSE device 10 times: {"name": "fuse", "groups": [{"count": 10, "paths": [{"path": "/dev/fuse"}]}]}
 Note: if omitted, "count" is assumed to be 1
 If mountPath is a directory, the device will be mounted to the directory with the name of the device.
-For example, to expose the serial devices to the /dev/serial directory: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*", "mountPath": "/dev/serial/"}]}]}
-`)
+For example, to expose the serial devices to the /dev/serial directory: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*", "mountPath": "/dev/serial/"}]}]}`)
 	flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
 	flag.String("log-level", logLevelInfo, fmt.Sprintf("Log level to use. Possible values: %s", availableLogLevels))
 	flag.String("listen", ":8080", "The address at which to listen for health and metrics.")
