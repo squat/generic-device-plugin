@@ -122,6 +122,63 @@ func TestDiscoverPaths(t *testing.T) {
 			err: nil,
 		},
 		{
+			name: "multiple with mount directory",
+			ds: &DeviceSpec{
+				Name: "serial",
+				Groups: []*Group{
+					{
+						Paths: []*Path{
+							{
+								Path:      "/dev/ttyUSB*",
+								MountPath: "/dev/serial/",
+							},
+						},
+					},
+				},
+			},
+			fs: fstest.MapFS{
+				"dev/ttyUSB0": {},
+				"dev/ttyUSB1": {},
+				"dev/ttyUSB2": {},
+				"dev/ttyUSB3": {},
+			},
+			out: []device{
+				{
+					deviceSpecs: []*v1beta1.DeviceSpec{
+						{
+							ContainerPath: "/dev/serial/ttyUSB0",
+							HostPath:      "/dev/ttyUSB0",
+						},
+					},
+				},
+				{
+					deviceSpecs: []*v1beta1.DeviceSpec{
+						{
+							ContainerPath: "/dev/serial/ttyUSB1",
+							HostPath:      "/dev/ttyUSB1",
+						},
+					},
+				},
+				{
+					deviceSpecs: []*v1beta1.DeviceSpec{
+						{
+							ContainerPath: "/dev/serial/ttyUSB2",
+							HostPath:      "/dev/ttyUSB2",
+						},
+					},
+				},
+				{
+					deviceSpecs: []*v1beta1.DeviceSpec{
+						{
+							ContainerPath: "/dev/serial/ttyUSB3",
+							HostPath:      "/dev/ttyUSB3",
+						},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
 			name: "only one exists",
 			ds: &DeviceSpec{
 				Name: "only-one-exists",
