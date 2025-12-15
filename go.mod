@@ -15,8 +15,8 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	google.golang.org/grpc v1.77.0
-	k8s.io/apimachinery v0.34.2
-	k8s.io/kubelet v0.34.2
+	k8s.io/apimachinery v0.34.3
+	k8s.io/kubelet v0.34.3
 )
 
 require (
