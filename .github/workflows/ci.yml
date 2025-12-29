@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: DeterminateSystems/determinate-nix-action@v3.15.0
+      - uses: DeterminateSystems/determinate-nix-action@v3.15.1
       - uses: DeterminateSystems/magic-nix-cache-action@v13
       - run: nix build
 
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: DeterminateSystems/determinate-nix-action@v3.15.0
+      - uses: DeterminateSystems/determinate-nix-action@v3.15.1
       - uses: DeterminateSystems/magic-nix-cache-action@v13
       - run: nix flake check -L --show-trace
 
@@ -66,7 +66,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           load: "true"
-      - uses: DeterminateSystems/determinate-nix-action@v3.15.0
+      - uses: DeterminateSystems/determinate-nix-action@v3.15.1
       - uses: DeterminateSystems/magic-nix-cache-action@v13
       - run: nix develop . --command go test -v ./...
 
