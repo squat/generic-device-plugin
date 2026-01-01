@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "generic-device-plugin.fullname" . }}
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: generic-device-plugin
+    {{- include "generic-device-plugin.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: generic-device-plugin
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/name: generic-device-plugin
+        {{- include "generic-device-plugin.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "generic-device-plugin.serviceAccountName" . }}
+      priorityClassName: system-node-critical
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: generic-device-plugin
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+          - --device
+          - |
+            name: serial
+            groups:
+              - paths:
+                  - path: /dev/ttyUSB*
+              - paths:
+                  - path: /dev/ttyACM*
+              - paths:
+                  - path: /dev/tty.usb*
+              - paths:
+                  - path: /dev/cu.*
+              - paths:
+                  - path: /dev/cuaU*
+              - paths:
+                  - path: /dev/rfcomm*
+          - --device
+          - |
+            name: video
+            groups:
+              - paths:
+                  - path: /dev/video0
+          - --device
+          - |
+            name: fuse
+            groups:
+              - count: 10
+                paths:
+                  - path: /dev/fuse
+          - --device
+          - |
+            name: audio
+            groups:
+              - count: 10
+                paths:
+                  - path: /dev/snd
+          - --device
+          - |
+            name: capture
+            groups:
+              - paths:
+                  - path: /dev/snd/controlC0
+                  - path: /dev/snd/pcmC0D0c
+              - paths:
+                  - path: /dev/snd/controlC1
+                    mountPath: /dev/snd/controlC0
+                  - path: /dev/snd/pcmC1D0c
+                    mountPath: /dev/snd/pcmC0D0c
+              - paths:
+                  - path: /dev/snd/controlC2
+                    mountPath: /dev/snd/controlC0
+                  - path: /dev/snd/pcmC2D0c
+                    mountPath: /dev/snd/pcmC0D0c
+              - paths:
+                  - path: /dev/snd/controlC3
+                    mountPath: /dev/snd/controlC0
+                  - path: /dev/snd/pcmC3D0c
+                    mountPath: /dev/snd/pcmC0D0c
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          ports:
+            - containerPort: 8080
+              name: http
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+            - name: dev
+              mountPath: /dev
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+        - name: dev
+          hostPath:
+            path: /dev
+  updateStrategy:
+    type: RollingUpdate
