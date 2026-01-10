@@ -200,6 +200,115 @@ func TestDiscoverPaths(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			name: "optional paths - some missing",
+			ds: &DeviceSpec{
+				Name: "serial",
+				Groups: []*Group{
+					{
+						Paths: []*Path{
+							{
+								Path:     "/dev/ttyS0",
+								Optional: true,
+							},
+							{
+								Path:     "/dev/ttyUSB0",
+								Optional: true,
+							},
+							{
+								Path:     "/dev/ttyUSB1",
+								Optional: true,
+							},
+						},
+					},
+				},
+			},
+			fs: fstest.MapFS{
+				"dev/ttyUSB0": {},
+			},
+			out: []device{
+				{
+					deviceSpecs: []*v1beta1.DeviceSpec{
+						{
+							ContainerPath: "/dev/ttyUSB0",
+							HostPath:      "/dev/ttyUSB0",
+						},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "optional paths - all present",
+			ds: &DeviceSpec{
+				Name: "serial",
+				Groups: []*Group{
+					{
+						Paths: []*Path{
+							{
+								Path:     "/dev/ttyS0",
+								Optional: true,
+							},
+							{
+								Path:     "/dev/ttyUSB0",
+								Optional: true,
+							},
+							{
+								Path:     "/dev/ttyUSB1",
+								Optional: true,
+							},
+						},
+					},
+				},
+			},
+			fs: fstest.MapFS{
+				"dev/ttyS0":   {},
+				"dev/ttyUSB0": {},
+				"dev/ttyUSB1": {},
+			},
+			out: []device{
+				{
+					deviceSpecs: []*v1beta1.DeviceSpec{
+						{
+							ContainerPath: "/dev/ttyS0",
+							HostPath:      "/dev/ttyS0",
+						},
+						{
+							ContainerPath: "/dev/ttyUSB0",
+							HostPath:      "/dev/ttyUSB0",
+						},
+						{
+							ContainerPath: "/dev/ttyUSB1",
+							HostPath:      "/dev/ttyUSB1",
+						},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "optional paths - all missing",
+			ds: &DeviceSpec{
+				Name: "serial",
+				Groups: []*Group{
+					{
+						Paths: []*Path{
+							{
+								Path:     "/dev/ttyS0",
+								Optional: true,
+							},
+							{
+								Path:     "/dev/ttyUSB0",
+								Optional: true,
+							},
+						},
+					},
+				},
+			},
+			fs:  fstest.MapFS{},
+			out: []device{},
+			err: nil,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.ds.Default()
