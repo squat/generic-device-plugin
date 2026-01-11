@@ -47,6 +47,8 @@ For example, to expose a CH340 serial converter: {"name": "ch340", "groups": [{"
 A "count" can be specified to allow a discovered device group to be scheduled multiple times.
 For example, to permit allocation of the FUSE device 10 times: {"name": "fuse", "groups": [{"count": 10, "paths": [{"path": "/dev/fuse"}]}]}
 Note: if omitted, "count" is assumed to be 1
+An "optional" field can be specified for individual paths to allow containers to start even when some devices are missing.
+For example, to expose serial devices that may or may not be present: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyS0", "optional": true}, {"path": "/dev/ttyUSB0", "optional": true}]}]}
 If mountPath is a directory, the device will be mounted to the directory with the name of the device.
 For example, to expose the serial devices to the /dev/serial directory: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*", "mountPath": "/dev/serial/"}]}]}`)
 	flag.String("plugin-directory", v1beta1.DevicePluginPath, "The directory in which to create plugin sockets.")
