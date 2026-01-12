@@ -309,6 +309,38 @@ func TestDiscoverPaths(t *testing.T) {
 			out: []device{},
 			err: nil,
 		},
+		{
+			name: "mount directory",
+			ds: &DeviceSpec{
+				Name: "input",
+				Groups: []*Group{
+					{
+						Paths: []*Path{
+							{
+								Path: "/dev/input",
+								Type: MountPathType,
+							},
+						},
+					},
+				},
+			},
+			fs: fstest.MapFS{
+				"dev/input/event0": {},
+				"dev/input/event1": {},
+				"dev/input/event2": {},
+			},
+			out: []device{
+				{
+					mounts: []*v1beta1.Mount{
+						{
+							ContainerPath: "/dev/input",
+							HostPath:      "/dev/input",
+						},
+					},
+				},
+			},
+			err: nil,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.ds.Default()
