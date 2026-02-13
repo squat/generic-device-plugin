@@ -49,6 +49,9 @@ type USBSpec struct {
 	Product USBID `json:"product"`
 	// Serial is the serial number of the device to match on.
 	Serial string `json:"serial"`
+	// MountPath is the file path at which the host device should be mounted within the container.
+	// When unspecified, MountPath defaults to the Path.
+	MountPath string `json:"mountPath,omitempty"`
 }
 
 // USBID is a representation of a platform or vendor ID under the USB standard (see gousb.ID)
@@ -273,26 +276,30 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 				_ = level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
 				paths = append(paths, match.BusPath())
 			}
-		}
-		if len(paths) > 0 {
-			for j := uint(0); j < group.Count; j++ {
-				h := sha1.New()
-				h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
-				d := device{
-					Device: &v1beta1.Device{
-						Health: v1beta1.Healthy,
-					},
+			if len(paths) > 0 {
+				for j := uint(0); j < group.Count; j++ {
+					h := sha1.New()
+					h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
+					d := device{
+						Device: &v1beta1.Device{
+							Health: v1beta1.Healthy,
+						},
+					}
+					for _, path := range paths {
+						containerPath := dev.MountPath
+						if containerPath == "" {
+							containerPath = path
+						}
+						d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
+							HostPath:      path,
+							ContainerPath: containerPath,
+							Permissions:   "rw",
+						})
+						h.Write([]byte(path))
+					}
+					d.ID = fmt.Sprintf("%x", h.Sum(nil))
+					devices = append(devices, d)
 				}
-				for _, path := range paths {
-					d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
-						HostPath:      path,
-						ContainerPath: path,
-						Permissions:   "rw",
-					})
-					h.Write([]byte(path))
-				}
-				d.ID = fmt.Sprintf("%x", h.Sum(nil))
-				devices = append(devices, d)
 			}
 		}
 	}
