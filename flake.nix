@@ -11,7 +11,7 @@
   };
 
   outputs =
-    inputs:
+    { self, ... }@inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.git-hooks-nix.flakeModule
@@ -29,60 +29,63 @@
           ...
         }:
         {
-          packages = rec {
-            generic-device-plugin = pkgs.buildGoModule (finalAttrs: {
-              pname = "generic-device-plugin";
-              version = "0.0.1";
-              src = ./.;
-              vendorHash = null;
-              checkFlags = [ "-skip=^TestE2E" ];
-              env.CGO_ENABLED = 0;
-              ldflags = [
-                "-s -w -X github.com/squat/generic-device-plugin/version.Version=${finalAttrs.version}"
-              ];
+          packages =
+            let
 
-              meta = {
-                description = "The generic-device-plugin enables allocating generic Linux devices, such as serial devices, the FUSE device, or video cameras, to Kubernetes Pods";
-                mainProgram = "generic-device-plugin";
-                homepage = "https://github.com/squat/generic-device-plugin";
-              };
-            });
+              _version = builtins.getEnv "VERSION";
+              generic-device-plugin = pkgs.buildGoModule (finalAttrs: {
+                pname = "generic-device-plugin";
+                version = if _version != "" then _version else toString (self.rev or self.dirtyRev or "unknown");
+                src = ./.;
+                vendorHash = null;
+                checkFlags = [ "-skip=^TestE2E" ];
+                env.CGO_ENABLED = 0;
+                ldflags = [
+                  "-s -w -X github.com/squat/generic-device-plugin/version.Version=${finalAttrs.version}"
+                ];
 
-            generic-device-plugin-cross-linux-amd64 = generic-device-plugin.overrideAttrs (
-              _: oldAttrs: {
-                env = oldAttrs.env // {
-                  GOOS = "linux";
-                  GOARCH = "amd64";
-                  CGO_ENABLED = 0;
+                meta = {
+                  description = "The generic-device-plugin enables allocating generic Linux devices, such as serial devices, the FUSE device, or video cameras, to Kubernetes Pods";
+                  mainProgram = "generic-device-plugin";
+                  homepage = "https://github.com/squat/generic-device-plugin";
                 };
-                checkPhase = false;
-              }
-            );
+              });
 
-            generic-device-plugin-cross-linux-arm = generic-device-plugin.overrideAttrs (
-              _: oldAttrs: {
-                env = oldAttrs.env // {
-                  GOOS = "linux";
-                  GOARCH = "arm";
-                  CGO_ENABLED = 0;
-                };
-                checkPhase = false;
-              }
-            );
-
-            generic-device-plugin-cross-linux-arm64 = generic-device-plugin.overrideAttrs (
-              _: oldAttrs: {
-                env = oldAttrs.env // {
-                  GOOS = "linux";
-                  GOARCH = "arm64";
-                  CGO_ENABLED = 0;
-                };
-                checkPhase = false;
-              }
-            );
-
-            default = generic-device-plugin;
-          };
+            in
+            {
+              inherit generic-device-plugin;
+              default = generic-device-plugin;
+            }
+            // (builtins.listToAttrs (
+              map
+                (target: {
+                  name = "generic-device-plugin-cross-${target.os}-${target.arch}";
+                  value = generic-device-plugin.overrideAttrs (
+                    _: oldAttrs: {
+                      env = oldAttrs.env // {
+                        GOOS = target.os;
+                        GOARCH = target.arch;
+                        CGO_ENABLED = 0;
+                      };
+                      checkPhase = false;
+                    }
+                  );
+                })
+                [
+                  {
+                    os = "linux";
+                    arch = "amd64";
+                  }
+                  {
+                    os = "linux";
+                    arch = "arm64";
+                  }
+                  {
+                    os = "linux";
+                    arch = "arm";
+                  }
+                ]
+            ));
 
           pre-commit = {
             check.enable = true;
