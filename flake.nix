@@ -30,7 +30,7 @@
         }:
         {
           packages = rec {
-            generic-device-plugin = pkgs.buildGoModule rec {
+            generic-device-plugin = pkgs.buildGoModule (finalAttrs: {
               pname = "generic-device-plugin";
               version = "0.0.1";
               src = ./.;
@@ -38,7 +38,7 @@
               checkFlags = [ "-skip=^TestE2E" ];
               env.CGO_ENABLED = 0;
               ldflags = [
-                "-s -w -X github.com/squat/generic-device-plugin/version.Version=${version}"
+                "-s -w -X github.com/squat/generic-device-plugin/version.Version=${finalAttrs.version}"
               ];
 
               meta = {
@@ -46,28 +46,40 @@
                 mainProgram = "generic-device-plugin";
                 homepage = "https://github.com/squat/generic-device-plugin";
               };
-            };
+            });
 
-            generic-device-plugin-cross-linux-amd64 = generic-device-plugin.overrideAttrs {
-              env.GOOS = "linux";
-              env.GOARCH = "amd64";
-              env.CGO_ENABLED = 0;
-              checkPhase = false;
-            };
+            generic-device-plugin-cross-linux-amd64 = generic-device-plugin.overrideAttrs (
+              _: oldAttrs: {
+                env = oldAttrs.env // {
+                  GOOS = "linux";
+                  GOARCH = "amd64";
+                  CGO_ENABLED = 0;
+                };
+                checkPhase = false;
+              }
+            );
 
-            generic-device-plugin-cross-linux-arm = generic-device-plugin.overrideAttrs {
-              env.GOOS = "linux";
-              env.GOARCH = "arm";
-              env.CGO_ENABLED = 0;
-              checkPhase = false;
-            };
+            generic-device-plugin-cross-linux-arm = generic-device-plugin.overrideAttrs (
+              _: oldAttrs: {
+                env = oldAttrs.env // {
+                  GOOS = "linux";
+                  GOARCH = "arm";
+                  CGO_ENABLED = 0;
+                };
+                checkPhase = false;
+              }
+            );
 
-            generic-device-plugin-cross-linux-arm64 = generic-device-plugin.overrideAttrs {
-              env.GOOS = "linux";
-              env.GOARCH = "arm64";
-              env.CGO_ENABLED = 0;
-              checkPhase = false;
-            };
+            generic-device-plugin-cross-linux-arm64 = generic-device-plugin.overrideAttrs (
+              _: oldAttrs: {
+                env = oldAttrs.env // {
+                  GOOS = "linux";
+                  GOARCH = "arm64";
+                  CGO_ENABLED = 0;
+                };
+                checkPhase = false;
+              }
+            );
 
             default = generic-device-plugin;
           };
