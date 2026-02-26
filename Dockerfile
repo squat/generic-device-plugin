@@ -7,11 +7,12 @@ ARG BUILDOS
 ARG BUILDARCH
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION
 
-RUN nix \
+RUN VERSION="$VERSION" nix \
     --extra-experimental-features "nix-command flakes" \
     --option filter-syscalls false \
-    build ".#generic-device-plugin-cross-$TARGETOS-$TARGETARCH"
+    build --impure ".#generic-device-plugin-cross-$TARGETOS-$TARGETARCH"
 RUN ln -s ../bin result/bin/"$BUILDOS"_"$BUILDARCH"
 FROM scratch
 
