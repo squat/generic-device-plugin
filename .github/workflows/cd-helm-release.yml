@@ -1,0 +1,39 @@
+name: Release Helm Chart
+concurrency: chart_releaser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/generic-device-plugin/**'
+
+jobs:
+  release:
+    # depending on default permission settings for your org (contents being read-only or read-write for workloads), you will have to add permissions
+    # see: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch history
+        run: git fetch --prune --unshallow
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3.5
+        with:
+          version: v3.14.3
+
+      - name: Run chart-releaser for generic-device-plugin
+        uses: helm/chart-releaser-action@v1.6.0
+        env:
+          CR_GENERATE_RELEASE_NOTES: true
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
