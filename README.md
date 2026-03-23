@@ -32,7 +32,7 @@ The `--device` flag can be provided multiple times to allow the plugin to discov
 To install the generic-device-plugin, choose what devices should be discovered and deploy the included DaemonSet:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/squat/generic-device-plugin/main/manifests/generic-device-plugin.yaml
+kubectl apply -f https://raw.githubusercontent.com/squat/generic-device-plugin/refs/tags/0.1.0/manifests/generic-device-plugin.yaml
 ```
 
 *Note*: the example manifest included in this repository discovers serial devices, the `/dev/video0` device, the `/dev/fuse` device, sound devices, and sound capture devices.
