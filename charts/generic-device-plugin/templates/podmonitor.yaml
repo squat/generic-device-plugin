@@ -1,0 +1,18 @@
+{{- if .Values.deployPodMonitor }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    app.kubernetes.io/name: generic-device-plugin
+    {{- include "generic-device-plugin.labels" . | nindent 4 }}
+  name: {{ include "generic-device-plugin.fullname" . }}
+  namespace: kube-system
+spec:
+  podMetricsEndpoints:
+  - interval: 15s
+    port: http
+    path: /metrics
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: generic-device-plugin
+{{- end }}
