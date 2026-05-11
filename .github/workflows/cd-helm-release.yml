@@ -36,7 +36,7 @@ jobs:
 
       - name: Run chart-releaser for generic-device-plugin
         id: cr
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@v1.7.0
         env:
           CR_GENERATE_RELEASE_NOTES: true
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
