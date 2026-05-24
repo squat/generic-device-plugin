@@ -42,3 +42,14 @@ tolerations:
   effect: "NoSchedule"
 # -- deploy the podMonitor (requires PodMonitor CRD to be installed)
 deployPodMonitor: true
+# -- additional CLI args appended to the generic-device-plugin container
+args: []
+# -- additional hostPath volumes to mount into the container.
+# Each entry: {name, hostPath, mountPath?, readOnly?, type?}.
+# mountPath defaults to hostPath when unset.
+# IMPORTANT: if any entry's effective mountPath is /dev or under /dev/*
+# the default /dev hostPath mount is dropped.
+hostPathMounts: []
+# -- list of device specs that replace the built-in device args when non-empty.
+# See https://github.com/squat/generic-device-plugin#overview for the schema.
+devices: []
