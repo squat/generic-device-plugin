@@ -18,7 +18,7 @@ A Helm chart for deploying the generic-device-plugin on Kubernetes
 | deployPodMonitor | bool | `true` | deploy the podMonitor (requires PodMonitor CRD to be installed) |
 | devices | list | `[]` | list of device specs that replace the built-in device args when non-empty. See https://github.com/squat/generic-device-plugin#overview for the schema. |
 | fullnameOverride | string | `""` | override the fullname of the chart resources |
-| hostPathMounts | list | `[]` | additional hostPath volumes to mount into the container. Each entry: {name, hostPath, mountPath, readOnly?, type?}. IMPORTANT: if any entry has a mountPath of /dev or under /dev/* the default /dev hostPath mount is dropped. |
+| hostPathMounts | list | `[]` | additional hostPath volumes to mount into the container. Each entry: {name, hostPath, mountPath?, readOnly?, type?}. mountPath defaults to hostPath when unset. IMPORTANT: if any entry's effective mountPath is /dev or under /dev/* the default /dev hostPath mount is dropped. |
 | image.pullPolicy | string | `"Always"` | image pullPolicy is set to always because tag is set to latest |
 | image.repository | string | `"squat/generic-device-plugin"` | container image repo |
 | image.tag | string | `"latest"` | Overrides the image tag whose default is the chart appVersion. |

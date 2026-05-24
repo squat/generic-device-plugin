@@ -1,6 +1,7 @@
 {{- $mountDev := true }}
 {{- range .Values.hostPathMounts }}
-  {{- if or (eq .mountPath "/dev") (hasPrefix "/dev/" .mountPath) }}
+  {{- $mp := default .hostPath .mountPath }}
+  {{- if or (eq $mp "/dev") (hasPrefix "/dev/" $mp) }}
     {{- $mountDev = false }}
   {{- end }}
 {{- end }}
@@ -123,7 +124,7 @@ spec:
             {{- end }}
             {{- range .Values.hostPathMounts }}
             - name: {{ .name }}
-              mountPath: {{ .mountPath }}
+              mountPath: {{ default .hostPath .mountPath }}
               {{- with .readOnly }}
               readOnly: {{ . }}
               {{- end }}
