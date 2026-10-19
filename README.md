@@ -7,7 +7,6 @@ This allows devices that don't require special drivers to be advertised to the c
 * mounting FUSE filesysems without `privileged`.
 
 [![Build Status](https://github.com/squat/generic-device-plugin/workflows/CI/badge.svg)](https://github.com/squat/generic-device-plugin/actions?query=workflow%3ACI)
-[![Go Report Card](https://goreportcard.com/badge/github.com/squat/generic-device-plugin)](https://goreportcard.com/report/github.com/squat/generic-device-plugin)
 [![Built with Nix](https://img.shields.io/static/v1?logo=nixos&logoColor=white&label=&message=Built%20with%20Nix&color=41439a)](https://builtwithnix.org)
 
 ## Overview
