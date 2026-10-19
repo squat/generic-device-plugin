@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: DeterminateSystems/determinate-nix-action@v3.20.0
-      - uses: DeterminateSystems/magic-nix-cache-action@v13
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
       - run: nix build
 
   lint:
@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: DeterminateSystems/determinate-nix-action@v3.20.0
-      - uses: DeterminateSystems/magic-nix-cache-action@v13
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
       - run: nix flake check -L --show-trace
 
   container:
@@ -62,7 +62,7 @@ jobs:
           cache-to: type=gha,mode=max
           load: "true"
       - uses: DeterminateSystems/determinate-nix-action@v3.20.0
-      - uses: DeterminateSystems/magic-nix-cache-action@v13
+      - uses: DeterminateSystems/magic-nix-cache-action@v15
       - run: nix develop . --command go test -v ./...
 
   push:
