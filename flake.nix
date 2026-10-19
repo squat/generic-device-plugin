@@ -93,8 +93,8 @@
               src = ./.;
               hooks = {
                 actionlint.enable = true;
-                nixfmt-rfc-style.enable = true;
-                nixfmt-rfc-style.excludes = [ "vendor" ];
+                nixfmt.enable = true;
+                nixfmt.excludes = [ "vendor" ];
                 gofmt.enable = true;
                 gofmt.excludes = [ "vendor" ];
                 golangci-lint.enable = true;
