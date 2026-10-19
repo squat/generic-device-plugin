@@ -259,7 +259,7 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# k8s.io/apimachinery v0.36.0
+# k8s.io/apimachinery v0.37.1
 ## explicit; go 1.26.0
 k8s.io/apimachinery/pkg/api/validate/constraints
 k8s.io/apimachinery/pkg/api/validate/content
@@ -279,7 +279,7 @@ k8s.io/klog/v2/internal/sloghandler
 # k8s.io/kubelet v0.36.0
 ## explicit; go 1.26.0
 k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1
-# k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
+# k8s.io/utils v0.0.0-20260626114624-be93311217bd
 ## explicit; go 1.23
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
