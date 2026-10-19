@@ -13,8 +13,8 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	google.golang.org/grpc v1.84.0
-	k8s.io/apimachinery v0.36.0
-	k8s.io/kubelet v0.36.0
+	k8s.io/apimachinery v0.37.1
+	k8s.io/kubelet v0.37.1
 )
 
 require (
@@ -46,7 +46,7 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
-	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 )
 
 tool github.com/campoy/embedmd
