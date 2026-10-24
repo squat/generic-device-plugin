@@ -93,7 +93,13 @@ spec:
         - containerPort: 8080
           name: http
         securityContext:
-          privileged: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - name: device-plugin
           mountPath: /var/lib/kubelet/device-plugins

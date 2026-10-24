@@ -26,6 +26,7 @@ A Helm chart for deploying the generic-device-plugin on Kubernetes
 | podAnnotations | object | `{}` | additional annotations for the generic-device-plugin pod |
 | podLabels | object | `{}` | additional labels for the generic-device-plugin pod |
 | resources | object | `{"limits":{"cpu":"50m","memory":"20Mi"},"requests":{"cpu":"50m","memory":"10Mi"}}` | resource requests and limits for the generic-device-plugin pod |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true,"seccompProfile":{"type":"RuntimeDefault"}}` | security context of the generic-device-plugin container. Listing device nodes in the host's /dev does not require privileges. |
 | serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
 | serviceAccount.automount | bool | `true` | Automatically mount a ServiceAccount's API credentials? |
 | serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
