@@ -113,8 +113,10 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+          {{- with .Values.securityContext }}
           securityContext:
-            privileged: true
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: device-plugin
               mountPath: /var/lib/kubelet/device-plugins
