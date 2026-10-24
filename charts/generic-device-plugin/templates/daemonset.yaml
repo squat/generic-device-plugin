@@ -29,6 +29,7 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "generic-device-plugin.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
       priorityClassName: system-node-critical
       {{- with .Values.tolerations }}
       tolerations:
