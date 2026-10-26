@@ -34,6 +34,16 @@ resources:
   limits:
     cpu: 50m
     memory: 20Mi
+# -- security context of the generic-device-plugin container.
+# Listing device nodes in the host's /dev does not require privileges.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+  seccompProfile:
+    type: RuntimeDefault
 # -- tolerations of kubernetes taints
 tolerations:
 - operator: "Exists"
