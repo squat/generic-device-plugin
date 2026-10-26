@@ -27,7 +27,7 @@ A Helm chart for deploying the generic-device-plugin on Kubernetes
 | podLabels | object | `{}` | additional labels for the generic-device-plugin pod |
 | resources | object | `{"limits":{"cpu":"50m","memory":"20Mi"},"requests":{"cpu":"50m","memory":"10Mi"}}` | resource requests and limits for the generic-device-plugin pod |
 | serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
-| serviceAccount.automount | bool | `true` | Automatically mount a ServiceAccount's API credentials? |
+| serviceAccount.automount | bool | `false` | Automatically mount a ServiceAccount's API credentials? |
 | serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
 | tolerations | list | `[{"effect":"NoExecute","operator":"Exists"},{"effect":"NoSchedule","operator":"Exists"}]` | tolerations of kubernetes taints |
