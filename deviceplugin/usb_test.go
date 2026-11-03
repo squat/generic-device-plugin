@@ -144,6 +144,106 @@ func TestDiscoverUSB(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			name: "matching devices remain grouped by default",
+			ds: &DeviceSpec{
+				Name: "grouped",
+				Groups: []*Group{
+					{USBSpecs: []*USBSpec{{Vendor: 0x1050, Product: 0x0407}}},
+				},
+			},
+			fs: fstest.MapFS{
+				"sys/bus/usb/devices/3-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/3-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/3-4/busnum":    {Data: []byte("3\n")},
+				"sys/bus/usb/devices/3-4/devnum":    {Data: []byte("22\n")},
+				"sys/bus/usb/devices/4-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/4-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/4-4/busnum":    {Data: []byte("4\n")},
+				"sys/bus/usb/devices/4-4/devnum":    {Data: []byte("25\n")},
+			},
+			out: []device{{deviceSpecs: []*v1beta1.DeviceSpec{
+				{ContainerPath: "/dev/bus/usb/003/022", HostPath: "/dev/bus/usb/003/022"},
+				{ContainerPath: "/dev/bus/usb/004/025", HostPath: "/dev/bus/usb/004/025"},
+			}}},
+		},
+		{
+			name: "each matching device is an allocatable resource",
+			ds: &DeviceSpec{
+				Name: "multiple",
+				Groups: []*Group{
+					{
+						USBSpecs:   []*USBSpec{{Vendor: 0x1050, Product: 0x0407}},
+						Individual: true,
+					},
+				},
+			},
+			fs: fstest.MapFS{
+				"sys/bus/usb/devices/3-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/3-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/3-4/busnum":    {Data: []byte("3\n")},
+				"sys/bus/usb/devices/3-4/devnum":    {Data: []byte("22\n")},
+				"sys/bus/usb/devices/4-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/4-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/4-4/busnum":    {Data: []byte("4\n")},
+				"sys/bus/usb/devices/4-4/devnum":    {Data: []byte("25\n")},
+			},
+			out: []device{
+				{deviceSpecs: []*v1beta1.DeviceSpec{{ContainerPath: "/dev/bus/usb/003/022", HostPath: "/dev/bus/usb/003/022"}}},
+				{deviceSpecs: []*v1beta1.DeviceSpec{{ContainerPath: "/dev/bus/usb/004/025", HostPath: "/dev/bus/usb/004/025"}}},
+			},
+		},
+		{
+			name: "matching instances of multiple USB specs are independently allocatable",
+			ds: &DeviceSpec{
+				Name: "multiple-specs",
+				Groups: []*Group{
+					{
+						USBSpecs: []*USBSpec{
+							{Vendor: 0x1050, Product: 0x0407},
+							{Vendor: 0x1a86, Product: 0x7523},
+						},
+						Individual: true,
+					},
+				},
+			},
+			fs: fstest.MapFS{
+				"sys/bus/usb/devices/3-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/3-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/3-4/busnum":    {Data: []byte("3\n")},
+				"sys/bus/usb/devices/3-4/devnum":    {Data: []byte("22\n")},
+
+				"sys/bus/usb/devices/4-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/4-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/4-4/busnum":    {Data: []byte("4\n")},
+				"sys/bus/usb/devices/4-4/devnum":    {Data: []byte("25\n")},
+
+				"sys/bus/usb/devices/5-4/idVendor":  {Data: []byte("1050\n")},
+				"sys/bus/usb/devices/5-4/idProduct": {Data: []byte("0407\n")},
+				"sys/bus/usb/devices/5-4/busnum":    {Data: []byte("5\n")},
+				"sys/bus/usb/devices/5-4/devnum":    {Data: []byte("28\n")},
+
+				"sys/bus/usb/devices/6-4/idVendor":  {Data: []byte("1a86\n")},
+				"sys/bus/usb/devices/6-4/idProduct": {Data: []byte("7523\n")},
+				"sys/bus/usb/devices/6-4/busnum":    {Data: []byte("6\n")},
+				"sys/bus/usb/devices/6-4/devnum":    {Data: []byte("31\n")},
+
+				"sys/bus/usb/devices/7-4/idVendor":  {Data: []byte("1a86\n")},
+				"sys/bus/usb/devices/7-4/idProduct": {Data: []byte("7523\n")},
+				"sys/bus/usb/devices/7-4/busnum":    {Data: []byte("7\n")},
+				"sys/bus/usb/devices/7-4/devnum":    {Data: []byte("34\n")},
+			},
+			out: []device{
+				{deviceSpecs: []*v1beta1.DeviceSpec{
+					{ContainerPath: "/dev/bus/usb/003/022", HostPath: "/dev/bus/usb/003/022"},
+					{ContainerPath: "/dev/bus/usb/006/031", HostPath: "/dev/bus/usb/006/031"},
+				}},
+				{deviceSpecs: []*v1beta1.DeviceSpec{
+					{ContainerPath: "/dev/bus/usb/004/025", HostPath: "/dev/bus/usb/004/025"},
+					{ContainerPath: "/dev/bus/usb/007/034", HostPath: "/dev/bus/usb/007/034"},
+				}},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.ds.Default()

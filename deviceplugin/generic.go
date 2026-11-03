@@ -74,6 +74,10 @@ type Group struct {
 	Paths []*Path `json:"paths"`
 	// USBSpecs is the list of USB specifications that this device group consists of.
 	USBSpecs []*USBSpec `json:"usb"`
+	// Individual makes each matching instance of the USB group independently
+        // schedulable. When false, all matching USB devices are grouped into one
+        // atomic device.
+        Individual bool `json:"individual,omitempty"`
 	// Count specifies how many times this group can be mounted concurrently.
 	// When unspecified, Count defaults to 1.
 	Count uint `json:"count,omitempty"`
