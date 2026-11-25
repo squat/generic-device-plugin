@@ -40,6 +40,9 @@ Should be provided in the form:
 The device definition can be either a path to a device file or a USB device. You cannot define both in the same group.
 For device files, use something like: {"paths": [{"path": "<path-1>", "mountPath": "<mount-path-1>"},{"path": "<path-2>", "mountPath": "<mount-path-2>"}]}
 For USB devices, use something like: {"usb": [{"vendor": "1209", "product": "000F"}, {"vendor": "1209", "product": "000F", "serial": "00000001"}]}
+Set "individual": true on a USB group to create a separate allocatable device for each matching instance of the USB group.
+When multiple USB specifications are defined in a group, matching devices are grouped by instance, with one match from each specification in each allocatable device.
+For example, to expose each matching CH340 serial converter as an independently allocatable device: {"name": "ch340", "groups": [{"usb": [{"vendor": "1a86", "product": "7523"}], "individual": true}]}
 For example, to expose serial devices with different names: {"name": "serial", "groups": [{"paths": [{"path": "/dev/ttyUSB*"}]}, {"paths": [{"path": "/dev/ttyACM*"}]}]}
 The device flag can specify lists of devices that should be grouped and mounted into a container together as one single meta-device.
 For example, to allocate and mount an audio capture device: {"name": "capture", "groups": [{"paths": [{"path": "/dev/snd/pcmC0D0c"}, {"path": "/dev/snd/controlC0"}]}]}

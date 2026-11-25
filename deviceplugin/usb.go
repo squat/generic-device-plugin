@@ -19,8 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -256,12 +258,39 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 	}
 
 	for _, group := range gp.ds.Groups {
-		var paths []string
+		if len(group.USBSpecs) == 0 {
+			continue
+		}
 		if err != nil {
 			_ = level.Warn(gp.logger).Log("msg", fmt.Sprintf("failed to enumerate usb devices: %v", err))
 			return devices, nil
 		}
-		for _, dev := range group.USBSpecs {
+		if !group.Individual {
+			var paths []string
+			for _, dev := range group.USBSpecs {
+				matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product, dev.Serial)
+				if err != nil {
+					return nil, err
+				}
+				sort.Slice(matches, func(i, j int) bool {
+					return matches[i].BusPath() < matches[j].BusPath()
+				})
+				if len(matches) == 0 {
+					_ = level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
+				}
+				for _, match := range matches {
+					_ = level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
+					paths = append(paths, match.BusPath())
+				}
+			}
+			if len(paths) > 0 {
+				devices = append(devices, createUSBDevices([][]string{paths}, group.Count)...)
+			}
+			continue
+		}
+		matchesBySpec := make([][]usbDevice, len(group.USBSpecs))
+		length := math.MaxInt
+		for i, dev := range group.USBSpecs {
 			matches, err := searchUSBDevices(&usbDevs, dev.Vendor, dev.Product, dev.Serial)
 			if err != nil {
 				return nil, err
@@ -269,32 +298,43 @@ func (gp *GenericPlugin) discoverUSB() (devices []device, err error) {
 			if len(matches) == 0 {
 				_ = level.Debug(gp.logger).Log("msg", "no USB devices found attached to system")
 			}
+			sort.Slice(matches, func(i, j int) bool {
+				return matches[i].BusPath() < matches[j].BusPath()
+			})
+			matchesBySpec[i] = matches
+			if len(matches) < length {
+				length = len(matches)
+			}
 			for _, match := range matches {
 				_ = level.Debug(gp.logger).Log("msg", "USB device match", "usbdevice", fmt.Sprintf("%v:%v", dev.Vendor.String(), dev.Product.String()), "path", match.BusPath())
-				paths = append(paths, match.BusPath())
 			}
 		}
-		if len(paths) > 0 {
-			for j := uint(0); j < group.Count; j++ {
-				h := sha1.New()
-				h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
-				d := device{
-					Device: &v1beta1.Device{
-						Health: v1beta1.Healthy,
-					},
-				}
-				for _, path := range paths {
-					d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
-						HostPath:      path,
-						ContainerPath: path,
-						Permissions:   "rw",
-					})
-					h.Write([]byte(path))
-				}
-				d.ID = fmt.Sprintf("%x", h.Sum(nil))
-				devices = append(devices, d)
+		for i := 0; i < length; i++ {
+			paths := make([]string, 0, len(matchesBySpec))
+			for _, matches := range matchesBySpec {
+				paths = append(paths, matches[i].BusPath())
 			}
+			devices = append(devices, createUSBDevices([][]string{paths}, group.Count)...)
 		}
 	}
 	return devices, nil
+}
+
+func createUSBDevices(pathGroups [][]string, count uint) (devices []device) {
+	for _, paths := range pathGroups {
+		for j := uint(0); j < count; j++ {
+			h := sha1.New()
+			h.Write([]byte(strconv.FormatUint(uint64(j), 10)))
+			d := device{Device: &v1beta1.Device{Health: v1beta1.Healthy}}
+			for _, path := range paths {
+				d.deviceSpecs = append(d.deviceSpecs, &v1beta1.DeviceSpec{
+					HostPath: path, ContainerPath: path, Permissions: "rw",
+				})
+				h.Write([]byte(path))
+			}
+			d.ID = fmt.Sprintf("%x", h.Sum(nil))
+			devices = append(devices, d)
+		}
+	}
+	return devices
 }
